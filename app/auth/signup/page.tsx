@@ -46,6 +46,9 @@ export default function SignupPage() {
         ? `${process.env.NEXT_PUBLIC_SITE_URL}/dashboard`
         : `${window.location.origin}/dashboard`
 
+      console.log("[v0] Signup redirect URL:", redirectUrl)
+      console.log("[v0] Attempting signup with email:", email)
+
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
@@ -54,14 +57,19 @@ export default function SignupPage() {
         },
       })
 
-      if (error) throw error
+      if (error) {
+        console.log("[v0] Signup error:", error)
+        throw error
+      }
 
+      console.log("[v0] Signup successful")
       setSuccess(true)
       setTimeout(() => {
         router.push("/dashboard")
         router.refresh()
       }, 2000)
     } catch (err: any) {
+      console.error("[v0] Signup failed:", err)
       setError(err.message || "Failed to create account")
     } finally {
       setLoading(false)
