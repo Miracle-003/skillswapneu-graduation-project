@@ -92,17 +92,27 @@ export default function LoginPage() {
                 disabled={loading}
               />
             </div>
+            <div className="text-right">
+              <Link href="/auth/forgot-password" className="text-sm text-[#8B1538] hover:underline">
+                Forgot password?
+              </Link>
+            </div>
           </CardContent>
           <CardFooter className="flex flex-col space-y-4">
             <Button type="submit" className="w-full bg-[#8B1538] hover:bg-[#A91D3A]" disabled={loading}>
               {loading ? "Signing in..." : "Sign In"}
             </Button>
-            <p className="text-sm text-center text-muted-foreground">
-              Don't have an account?{" "}
-              <Link href="/auth/signup" className="text-[#8B1538] hover:underline font-medium">
-                Sign up
+            <div className="flex items-center justify-between w-full text-sm">
+              <Link href="/auth/forgot-password" className="text-[#8B1538] hover:underline">
+                Forgot password?
               </Link>
-            </p>
+              <p className="text-sm text-muted-foreground">
+                Don't have an account?{" "}
+                <Link href="/auth/signup" className="text-[#8B1538] hover:underline font-medium">
+                  Sign up
+                </Link>
+              </p>
+            </div>
           </CardFooter>
         </form>
       </Card>
