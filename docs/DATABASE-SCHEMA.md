@@ -1,5 +1,5 @@
 # Database Schema Document
-## Study Buddy Matching Platform
+## skill swap Matching Platform
 
 **Version:** 1.0  
 **Date:** January 2025
@@ -8,7 +8,7 @@
 
 ## 1. Overview
 
-This document defines the complete database schema for the Study Buddy Matching Platform using PostgreSQL.
+This document defines the complete database schema for the skill swap Matching Platform using PostgreSQL.
 
 ---
 
@@ -531,7 +531,7 @@ INSERT INTO subjects (name, category, description) VALUES
 ### Sample Achievements
 \`\`\`sql
 INSERT INTO achievements (name, description, category, points, requirement) VALUES
-('First Match', 'Connected with your first study buddy', 'social', 10, '{"type": "match_count", "value": 1}'),
+('First Match', 'Connected with your first skill swap', 'social', 10, '{"type": "match_count", "value": 1}'),
 ('Week Warrior', 'Maintained a 7-day study streak', 'streak', 50, '{"type": "streak_days", "value": 7}'),
 ('Helpful Peer', 'Gave 10 helpful reviews', 'social', 25, '{"type": "reviews_given", "value": 10}'),
 ('Top Rated', 'Achieved 4.5+ reputation score', 'milestone', 100, '{"type": "reputation_score", "value": 4.5}');

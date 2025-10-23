@@ -1,4 +1,4 @@
-// Prisma Schema for Study Buddy Platform
+// Prisma Schema for skill swap Platform
 // This file contains the complete database schema definition
 
 export const prismaSchema = `

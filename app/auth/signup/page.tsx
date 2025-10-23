@@ -86,7 +86,7 @@ export default function SignupPage() {
             </div>
           </div>
           <CardTitle className="text-2xl font-bold">Create Your Account</CardTitle>
-          <CardDescription>Join Study Buddy and start collaborating</CardDescription>
+          <CardDescription>Join skill swap and start collaborating</CardDescription>
         </CardHeader>
         <form onSubmit={handleSignup}>
           <CardContent className="space-y-4">

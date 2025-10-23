@@ -39,7 +39,7 @@ const BADGES: BadgeData[] = [
   {
     id: "first-connection",
     name: "First Connection",
-    description: "Made your first study buddy connection",
+    description: "Made your first skill swap connection",
     icon: "users",
     earned: false,
   },

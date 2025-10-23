@@ -1,5 +1,5 @@
 # Architecture Design Document (ADD)
-## Study Buddy Matching Platform
+## skill swap Matching Platform
 
 **Version:** 1.0  
 **Date:** January 2025
@@ -9,7 +9,7 @@
 ## 1. Introduction
 
 ### 1.1 Purpose
-This document describes the software architecture of the Study Buddy Matching Platform, including system structure, components, data flow, and technology stack.
+This document describes the software architecture of the skill swap Matching Platform, including system structure, components, data flow, and technology stack.
 
 ### 1.2 Scope
 Covers frontend, backend, database, and integration architecture for the complete system.

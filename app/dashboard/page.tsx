@@ -26,7 +26,7 @@ export default async function DashboardPage() {
             <div className="w-8 h-8 bg-[#8B1538] rounded-lg flex items-center justify-center">
               <BookOpen className="w-5 h-5 text-white" />
             </div>
-            <h1 className="text-xl font-bold">Study Buddy</h1>
+            <h1 className="text-xl font-bold">skill swap</h1>
           </div>
           <div className="flex items-center gap-4">
             <Button asChild variant="ghost" size="sm">
@@ -63,7 +63,7 @@ export default async function DashboardPage() {
                 <div className="flex-1">
                   <h3 className="font-semibold text-lg mb-1">Get Started with AI Onboarding</h3>
                   <p className="text-sm text-muted-foreground">
-                    Chat with our AI assistant to learn how to make the most of Study Buddy
+                    Chat with our AI assistant to learn how to make the most of skill swap
                   </p>
                 </div>
                 <Button asChild className="bg-[#8B1538] hover:bg-[#A91D3A]">

@@ -37,7 +37,7 @@ export default function HomePage() {
       {/* Features Section */}
       <section className="py-20 px-4">
         <div className="max-w-6xl mx-auto">
-          <h2 className="text-4xl font-bold text-center mb-12">Why Study Buddy?</h2>
+          <h2 className="text-4xl font-bold text-center mb-12">Why skill swap?</h2>
           <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
             <div className="text-center">
               <div className="w-16 h-16 bg-[#8B1538] rounded-lg flex items-center justify-center mx-auto mb-4">
@@ -96,7 +96,7 @@ export default function HomePage() {
       {/* Footer */}
       <footer className="py-8 px-4 border-t">
         <div className="max-w-6xl mx-auto text-center text-muted-foreground">
-          <p>&copy; 2025 Study Buddy Platform. All rights reserved.</p>
+          <p>&copy; 2025 skill swap Platform. All rights reserved.</p>
         </div>
       </footer>
     </div>

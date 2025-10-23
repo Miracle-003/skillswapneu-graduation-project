@@ -1,5 +1,5 @@
 # Software Requirements Specification (SRS)
-## Study Buddy Matching Platform
+## skill swap Matching Platform
 
 **Version:** 1.0  
 **Date:** January 2025  
@@ -10,10 +10,10 @@
 ## 1. Introduction
 
 ### 1.1 Purpose
-This Software Requirements Specification (SRS) document provides a comprehensive description of the Study Buddy Matching Platform - a peer-to-peer learning system designed to connect university students for collaborative study sessions, knowledge sharing, and academic support.
+This Software Requirements Specification (SRS) document provides a comprehensive description of the skill swap Matching Platform - a peer-to-peer learning system designed to connect university students for collaborative study sessions, knowledge sharing, and academic support.
 
 ### 1.2 Scope
-The Study Buddy Matching Platform is a full-stack web application that enables students to:
+The skill swap Matching Platform is a full-stack web application that enables students to:
 - Create detailed academic profiles with subjects, skills, and learning preferences
 - Discover compatible study partners through an intelligent matching algorithm
 - Communicate via real-time chat functionality
@@ -44,7 +44,7 @@ This document is structured to provide detailed functional and non-functional re
 ## 2. Overall Description
 
 ### 2.1 Product Perspective
-The Study Buddy Matching Platform is a standalone web application that integrates with:
+The skill swap Matching Platform is a standalone web application that integrates with:
 - PostgreSQL database for data persistence
 - AI services for intelligent onboarding
 - Real-time communication infrastructure
@@ -362,7 +362,7 @@ The Study Buddy Matching Platform is a standalone web application that integrate
 ---
 
 ## Appendix A: Glossary
-- **Study Buddy**: A matched peer for collaborative learning
+- **skill swap**: A matched peer for collaborative learning
 - **Compatibility Score**: Numerical representation of match quality
 - **Study Session**: Scheduled meeting between matched users
 - **Reputation Score**: Aggregate rating from peer reviews

@@ -12,13 +12,13 @@ export default function OnboardingPage() {
 
   const steps = [
     {
-      title: "Welcome to Study Buddy!",
+      title: "Welcome to skill swap!",
       description: "Your platform for collaborative learning",
       icon: Users,
       content: (
         <div className="space-y-4">
           <p className="text-muted-foreground">
-            Study Buddy connects you with like-minded students to enhance your learning experience through collaboration
+            skill swap connects you with like-minded students to enhance your learning experience through collaboration
             and peer support.
           </p>
           <div className="space-y-3">

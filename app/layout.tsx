@@ -8,7 +8,7 @@ const _geist = Geist({ subsets: ["latin"] })
 const _geistMono = Geist_Mono({ subsets: ["latin"] })
 
 export const metadata: Metadata = {
-  title: "Study Buddy - Find Your Perfect Study Partner",
+  title: "skill swap - Find Your Perfect Study Partner",
   description: "Connect with peers, collaborate on projects, and achieve academic excellence together",
   generator: "v0.app",
 }

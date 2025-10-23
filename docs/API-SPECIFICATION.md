@@ -1,5 +1,5 @@
 # API Specification Document
-## Study Buddy Matching Platform
+## skill swap Matching Platform
 
 **Version:** 1.0  
 **Date:** January 2025  
@@ -373,7 +373,7 @@ Authorization: Bearer <token>
 
 ### 3.2 Send Connection Request
 **Endpoint:** `POST /matches/request`  
-**Description:** Send study buddy connection request  
+**Description:** Send skill swap connection request  
 **Authentication:** Required
 
 **Request Body:**
@@ -787,7 +787,7 @@ Authorization: Bearer <token>
       {
         "id": "achievement-uuid",
         "name": "First Match",
-        "description": "Connected with your first study buddy",
+        "description": "Connected with your first skill swap",
         "icon": "🤝",
         "category": "social",
         "points": 10,
