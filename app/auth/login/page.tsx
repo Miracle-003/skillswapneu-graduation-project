@@ -1,7 +1,6 @@
 "use client"
 
 import type React from "react"
-
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
@@ -102,17 +101,12 @@ export default function LoginPage() {
             <Button type="submit" className="w-full bg-[#8B1538] hover:bg-[#A91D3A]" disabled={loading}>
               {loading ? "Signing in..." : "Sign In"}
             </Button>
-            <div className="flex items-center justify-between w-full text-sm">
-              <Link href="/auth/forgot-password" className="text-[#8B1538] hover:underline">
-                Forgot password?
+            <p className="text-sm text-muted-foreground text-center">
+              Don&apos;t have an account?{" "}
+              <Link href="/auth/signup" className="text-[#8B1538] hover:underline font-medium">
+                Sign up
               </Link>
-              <p className="text-sm text-muted-foreground">
-                Don't have an account?{" "}
-                <Link href="/auth/signup" className="text-[#8B1538] hover:underline font-medium">
-                  Sign up
-                </Link>
-              </p>
-            </div>
+            </p>
           </CardFooter>
         </form>
       </Card>
