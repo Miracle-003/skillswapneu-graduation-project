@@ -1,21 +1,56 @@
-import { redirect } from "next/navigation"
-import { getSupabaseServerClient } from "@/lib/supabase/server"
+"use client"
+
+import { useEffect, useState } from "react"
+import { useRouter } from "next/navigation"
+import Link from "next/link"
+import { getSupabaseBrowserClient } from "@/lib/supabase/client"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { LogOut, User, Users, MessageSquare, BookOpen, FileText, Trophy, Sparkles } from "lucide-react"
-import Link from "next/link"
 
-export default async function DashboardPage() {
-  const supabase = await getSupabaseServerClient()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
+export default function DashboardPage() {
+  const router = useRouter()
+  const supabase = getSupabaseBrowserClient()
+  const [email, setEmail] = useState<string | null>(null)
+  const [profile, setProfile] = useState<any | null>(null)
+  const [loading, setLoading] = useState(true)
 
-  if (!user) {
-    redirect("/auth/login")
+  useEffect(() => {
+    const init = async () => {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser()
+      if (!user) {
+        router.replace("/auth/login")
+        return
+      }
+      setEmail(user.email)
+
+      const { data: prof } = await supabase
+        .from("user_profiles")
+        .select("*")
+        .eq("user_id", user.id)
+        .single()
+
+      setProfile(prof ?? null)
+      setLoading(false)
+    }
+
+    void init()
+  }, [])
+
+  const handleSignOut = async () => {
+    await supabase.auth.signOut()
+    router.push("/auth/login")
   }
 
-  const { data: profile } = await supabase.from("user_profiles").select("*").eq("user_id", user.id).single()
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <p className="text-muted-foreground">Loading...</p>
+      </div>
+    )
+  }
 
   return (
     <div className="min-h-screen bg-background">
@@ -35,13 +70,11 @@ export default async function DashboardPage() {
                 Achievements
               </Link>
             </Button>
-            <span className="text-sm text-muted-foreground">{user.email}</span>
-            <form action="/auth/signout" method="post">
-              <Button variant="outline" size="sm">
-                <LogOut className="w-4 h-4 mr-2" />
-                Sign Out
-              </Button>
-            </form>
+            <span className="text-sm text-muted-foreground">{email}</span>
+            <Button onClick={handleSignOut} variant="outline" size="sm">
+              <LogOut className="w-4 h-4 mr-2" />
+              Sign Out
+            </Button>
           </div>
         </div>
       </header>

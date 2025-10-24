@@ -47,6 +47,7 @@ export default function ProfilePage() {
   })
   const [newCourse, setNewCourse] = useState("")
   const [newInterest, setNewInterest] = useState("")
+  const [userId, setUserId] = useState<string | null>(null)
 
   const router = useRouter()
   const supabase = getSupabaseBrowserClient()
@@ -61,6 +62,8 @@ export default function ProfilePage() {
         data: { user },
       } = await supabase.auth.getUser()
       if (!user) return
+
+      setUserId(user.id)
 
       const { data, error } = await supabase.from("user_profiles").select("*").eq("user_id", user.id).single()
 
@@ -89,13 +92,21 @@ export default function ProfilePage() {
     setLoading(true)
 
     try {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser()
-      if (!user) throw new Error("Not authenticated")
+      // Prefer previously loaded user id to avoid transient null from getUser()
+      let uid = userId
+      if (!uid) {
+        const { data: userRes } = await supabase.auth.getUser()
+        uid = userRes.user?.id || null
+      }
+      if (!uid) {
+        // Attempt to recover session (in case of a stale token)
+        const { data: sessionRes } = await supabase.auth.getSession()
+        uid = sessionRes.session?.user?.id || null
+      }
+      if (!uid) throw new Error("Not authenticated")
 
       const { error } = await supabase.from("user_profiles").upsert({
-        user_id: user.id,
+        user_id: uid,
         ...profile,
         updated_at: new Date().toISOString(),
       })
@@ -139,6 +150,7 @@ export default function ProfilePage() {
         <div className="max-w-4xl mx-auto px-4 py-4">
           <Link
             href="/dashboard"
+            prefetch={false}
             className="inline-flex items-center text-sm text-muted-foreground hover:text-foreground"
           >
             <ArrowLeft className="w-4 h-4 mr-2" />
