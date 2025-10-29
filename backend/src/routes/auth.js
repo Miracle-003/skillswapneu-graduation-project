@@ -1,39 +1,59 @@
 import express from "express"
 import { prisma } from "../lib/prisma.js"
+import { supabase } from "../lib/supabase.js"
 
 const router = express.Router()
 
-// Register
+// Register via Supabase Auth
 router.post("/register", async (req, res) => {
   try {
-    const { email, name, password } = req.body
+    const { email, password, name } = req.body
 
-    // In production, hash password with bcrypt
-    const user = await prisma.user.create({
-      data: { email, name },
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        data: { full_name: name },
+      },
     })
 
-    res.status(201).json({ user })
+    if (error) return res.status(400).json({ error: error.message })
+
+    res.status(201).json({ user: data.user })
   } catch (error) {
     res.status(400).json({ error: error.message })
   }
 })
 
-// Login
+// Login via Supabase Auth - returns access token and user
 router.post("/login", async (req, res) => {
   try {
     const { email, password } = req.body
 
-    const user = await prisma.user.findUnique({
-      where: { email },
-      include: { profile: true },
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password })
+    if (error || !data.session) return res.status(401).json({ error: error?.message || "Invalid credentials" })
+
+    return res.json({
+      token: data.session.access_token,
+      refreshToken: data.session.refresh_token,
+      user: data.user,
     })
+  } catch (error) {
+    res.status(400).json({ error: error.message })
+  }
+})
 
-    if (!user) {
-      return res.status(401).json({ error: "Invalid credentials" })
-    }
+// Get current user from Bearer token
+router.get("/me", async (req, res) => {
+  try {
+    const auth = req.headers.authorization
+    if (!auth?.startsWith("Bearer ")) return res.status(401).json({ error: "Missing bearer token" })
+    const token = auth.slice(7).trim()
 
-    res.json({ user })
+    const { data, error } = await supabase.auth.getUser(token)
+    if (error || !data.user) return res.status(401).json({ error: "Invalid token" })
+
+    return res.json({ user: data.user })
   } catch (error) {
     res.status(400).json({ error: error.message })
   }

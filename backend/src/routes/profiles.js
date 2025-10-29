@@ -6,9 +6,7 @@ const router = express.Router()
 // Get all profiles
 router.get("/", async (req, res) => {
   try {
-    const profiles = await prisma.profile.findMany({
-      include: { user: true },
-    })
+    const profiles = await prisma.userProfile.findMany()
     res.json(profiles)
   } catch (error) {
     res.status(400).json({ error: error.message })
@@ -18,9 +16,8 @@ router.get("/", async (req, res) => {
 // Get profile by ID
 router.get("/:id", async (req, res) => {
   try {
-    const profile = await prisma.profile.findUnique({
-      where: { id: req.params.id },
-      include: { user: true },
+    const profile = await prisma.userProfile.findUnique({
+      where: { userId: req.params.id },
     })
 
     if (!profile) {
@@ -38,7 +35,7 @@ router.post("/", async (req, res) => {
   try {
     const { userId, ...profileData } = req.body
 
-    const profile = await prisma.profile.upsert({
+    const profile = await prisma.userProfile.upsert({
       where: { userId },
       update: profileData,
       create: { userId, ...profileData },

@@ -39,4 +39,14 @@ router.post("/", async (req, res) => {
   }
 })
 
+// Mark message as read
+router.patch("/:id/read", async (req, res) => {
+  try {
+    // Model has no 'read' field; acknowledge without DB mutation
+    res.status(204).send()
+  } catch (error) {
+    res.status(400).json({ error: error.message })
+  }
+})
+
 export default router

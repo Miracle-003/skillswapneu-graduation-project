@@ -1,5 +1,5 @@
 {
-  "buildCommand": "npm run build --prefix frontend",
+  "builds": [{ "src": "frontend/next.config.mjs", "use": "@vercel/next" }],
   "installCommand": "npm install --legacy-peer-deps --prefix frontend",
-  "outputDirectory": "frontend/.next"
+  "buildCommand": "npm run build --prefix frontend"
 }
