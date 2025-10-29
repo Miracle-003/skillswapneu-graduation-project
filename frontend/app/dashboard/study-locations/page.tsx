@@ -150,7 +150,7 @@ export default function StudyLocationsPage() {
                   center={[35.2283, 33.3211]}
                   zoom={16}
                   markers={mapMarkers}
-                  className="h-[600px] w-full rounded-lg border"
+                  className="h-[50vh] md:h-[600px] w-full rounded-lg border"
                 />
               </CardContent>
             </Card>

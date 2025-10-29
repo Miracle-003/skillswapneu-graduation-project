@@ -328,7 +328,7 @@ export default function ChatPage() {
           <p className="text-muted-foreground">Chat with connections and discover new study partners</p>
         </div>
 
-        <div className="grid lg:grid-cols-12 gap-6 h-[700px]">
+        <div className="grid lg:grid-cols-12 gap-6 h-[70vh] sm:h-[80vh] md:h-[700px]">
           {/* Left: Conversations List */}
           <Card className="lg:col-span-3">
             <CardHeader>
@@ -338,7 +338,7 @@ export default function ChatPage() {
               </CardTitle>
             </CardHeader>
             <CardContent className="p-0">
-              <ScrollArea className="h-[600px]">
+              <ScrollArea className="h-[55vh] sm:h-[65vh] md:h-[600px]">
                 {loading ? (
                   <div className="p-4 text-center text-muted-foreground">Loading...</div>
                 ) : conversations.length === 0 ? (

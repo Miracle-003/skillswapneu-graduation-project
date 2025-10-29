@@ -6,7 +6,7 @@ export default function HomePage() {
   return (
     <div className="min-h-screen bg-background">
       {/* Hero Section */}
-      <section className="relative h-[600px] flex items-center justify-center overflow-hidden">
+      <section className="relative h-[70vh] md:h-[600px] flex items-center justify-center overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-br from-[#8B1538] via-[#A91D3A] to-[#C73659] opacity-90" />
         <img
           src="/university-campus-at-sunset-with-students-studying.jpg"
