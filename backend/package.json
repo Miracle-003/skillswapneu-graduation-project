@@ -1,28 +1,23 @@
 {
-  "name": "backend",
-  "version": "0.1.0",
-  "private": true,
+  "name": "skillswap-backend",
+  "version": "1.0.0",
   "type": "module",
   "scripts": {
-    "dev": "tsx watch src/index.ts",
-    "build": "tsc -p tsconfig.json",
-    "start": "node dist/index.js",
-    "lint": "echo \"No linter configured\""
+    "dev": "node --watch src/index.js",
+    "start": "node src/index.js",
+    "prisma:generate": "prisma generate",
+    "prisma:migrate": "prisma migrate dev",
+    "prisma:studio": "prisma studio"
   },
   "dependencies": {
-    "@supabase/supabase-js": "2.46.2",
-    "cors": "2.8.5",
-    "dotenv": "16.4.5",
-    "express": "4.19.2",
-    "helmet": "7.2.0",
-    "morgan": "1.10.0",
-    "zod": "3.25.6"
+    "@prisma/client": "^6.2.0",
+    "express": "^4.19.2",
+    "cors": "^2.8.5",
+    "helmet": "^7.2.0",
+    "morgan": "^1.10.0",
+    "dotenv": "^16.4.5"
   },
   "devDependencies": {
-    "@types/cors": "^2.8.19",
-    "@types/express": "^5.0.4",
-    "@types/morgan": "^1.9.10",
-    "tsx": "4.19.1",
-    "typescript": "5.6.3"
+    "prisma": "^6.2.0"
   }
 }

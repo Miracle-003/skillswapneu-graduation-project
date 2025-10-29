@@ -1,0 +1,73 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String    @id @default(uuid())
+  email         String    @unique
+  name          String?
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+  
+  profile       Profile?
+  
+  @@map("users")
+}
+
+model Profile {
+  id                String   @id @default(uuid())
+  userId            String   @unique @map("user_id")
+  major             String?
+  year              String?
+  bio               String?
+  courses           String[] @default([])
+  interests         String[] @default([])
+  learningStyle     String?  @map("learning_style")
+  studyPreferences  String[] @default([]) @map("study_preferences")
+  availability      String?
+  profilePicture    String?  @map("profile_picture")
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
+  
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@map("profiles")
+}
+
+model Match {
+  id                String   @id @default(uuid())
+  userId1           String   @map("user_id_1")
+  userId2           String   @map("user_id_2")
+  compatibilityScore Float   @map("compatibility_score")
+  status            String   @default("pending")
+  createdAt         DateTime @default(now()) @map("created_at")
+  
+  @@map("matches")
+}
+
+model Message {
+  id          String   @id @default(uuid())
+  senderId    String   @map("sender_id")
+  receiverId  String   @map("receiver_id")
+  content     String
+  read        Boolean  @default(false)
+  createdAt   DateTime @default(now()) @map("created_at")
+  
+  @@map("messages")
+}
+
+model Review {
+  id          String   @id @default(uuid())
+  authorId    String   @map("author_id")
+  revieweeId  String   @map("reviewee_id")
+  rating      Int
+  comment     String?
+  createdAt   DateTime @default(now()) @map("created_at")
+  
+  @@map("reviews")
+}

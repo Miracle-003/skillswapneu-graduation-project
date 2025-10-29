@@ -6,10 +6,12 @@ import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { ScrollArea } from "@/components/ui/scroll-area"
+import { Badge } from "@/components/ui/badge"
 import { getSupabaseBrowserClient } from "@/lib/supabase/client"
-import { ArrowLeft, Send, Users } from "lucide-react"
+import { ArrowLeft, Send, Users, Heart, X, ChevronUp, ChevronDown, BookOpen } from "lucide-react"
 import Link from "next/link"
 import { formatDistanceToNow } from "date-fns"
+import { toast } from "sonner"
 
 interface Conversation {
   id: string
@@ -28,9 +30,20 @@ interface Message {
   created_at: string
 }
 
+interface PotentialMatch {
+  user_id: string
+  full_name: string
+  major: string
+  courses: string[]
+  match_score: number
+  common_courses: string[]
+}
+
 export default function ChatPage() {
   const [conversations, setConversations] = useState<Conversation[]>([])
+  const [potentialMatches, setPotentialMatches] = useState<PotentialMatch[]>([])
   const [selectedConversation, setSelectedConversation] = useState<string | null>(null)
+  const [selectedMatchIndex, setSelectedMatchIndex] = useState(0)
   const [messages, setMessages] = useState<Message[]>([])
   const [newMessage, setNewMessage] = useState("")
   const [currentUserId, setCurrentUserId] = useState<string>("")
@@ -53,6 +66,21 @@ export default function ChatPage() {
     scrollToBottom()
   }, [messages])
 
+  useEffect(() => {
+    const handleKeyPress = (e: KeyboardEvent) => {
+      if (potentialMatches.length === 0) return
+
+      if (e.key === "ArrowLeft" && selectedMatchIndex > 0) {
+        setSelectedMatchIndex((prev) => prev - 1)
+      } else if (e.key === "ArrowRight" && selectedMatchIndex < potentialMatches.length - 1) {
+        setSelectedMatchIndex((prev) => prev + 1)
+      }
+    }
+
+    window.addEventListener("keydown", handleKeyPress)
+    return () => window.removeEventListener("keydown", handleKeyPress)
+  }, [potentialMatches, selectedMatchIndex])
+
   const initializeChat = async () => {
     try {
       const {
@@ -61,7 +89,7 @@ export default function ChatPage() {
       if (!user) return
 
       setCurrentUserId(user.id)
-      await loadConversations(user.id)
+      await Promise.all([loadConversations(user.id), loadPotentialMatches(user.id)])
     } catch (err) {
       console.error("[v0] Error initializing chat:", err)
     } finally {
@@ -104,6 +132,48 @@ export default function ChatPage() {
       setConversations(conversationList)
     } catch (err) {
       console.error("[v0] Error loading conversations:", err)
+    }
+  }
+
+  const loadPotentialMatches = async (userId: string) => {
+    try {
+      const { data: currentProfile } = await supabase.from("user_profiles").select("*").eq("user_id", userId).single()
+
+      if (!currentProfile) return
+
+      const { data: existingConnections } = await supabase
+        .from("connections")
+        .select("user_id_2")
+        .eq("user_id_1", userId)
+
+      const connectedIds = existingConnections?.map((c) => c.user_id_2) || []
+
+      const { data: allProfiles } = await supabase.from("user_profiles").select("*").neq("user_id", userId).limit(20)
+
+      if (!allProfiles) return
+
+      const matches = allProfiles
+        .map((profile) => {
+          const commonCourses = profile.courses.filter((course: string) => currentProfile.courses.includes(course))
+          let score = commonCourses.length * 30
+          score += profile.major === currentProfile.major ? 20 : 0
+
+          return {
+            user_id: profile.user_id,
+            full_name: profile.full_name,
+            major: profile.major,
+            courses: profile.courses,
+            match_score: Math.min(score, 100),
+            common_courses: commonCourses,
+          }
+        })
+        .filter((profile) => profile.match_score > 0 && !connectedIds.includes(profile.user_id))
+        .sort((a, b) => b.match_score - a.match_score)
+        .slice(0, 10)
+
+      setPotentialMatches(matches)
+    } catch (err) {
+      console.error("[v0] Error loading potential matches:", err)
     }
   }
 
@@ -204,6 +274,25 @@ export default function ChatPage() {
     }
   }
 
+  const handleConnectMatch = async (matchUserId: string) => {
+    try {
+      const { error } = await supabase.from("connections").insert({
+        user_id_1: currentUserId,
+        user_id_2: matchUserId,
+        status: "accepted",
+      })
+
+      if (error) throw error
+
+      toast.success("Connected! You can now chat with this person.")
+      await loadConversations(currentUserId)
+      setPotentialMatches((prev) => prev.filter((m) => m.user_id !== matchUserId))
+    } catch (err) {
+      console.error("[v0] Error connecting:", err)
+      toast.error("Failed to connect")
+    }
+  }
+
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
   }
@@ -216,6 +305,8 @@ export default function ChatPage() {
       .toUpperCase()
       .slice(0, 2)
   }
+
+  const currentMatch = potentialMatches[selectedMatchIndex]
 
   return (
     <div className="min-h-screen bg-background">
@@ -233,27 +324,27 @@ export default function ChatPage() {
 
       <main className="max-w-7xl mx-auto px-4 py-8">
         <div className="mb-8">
-          <h1 className="text-3xl font-bold mb-2">Messages</h1>
-          <p className="text-muted-foreground">Chat with your study partners in real-time</p>
+          <h1 className="text-3xl font-bold mb-2">Messages & Discovery</h1>
+          <p className="text-muted-foreground">Chat with connections and discover new study partners</p>
         </div>
 
-        <div className="grid lg:grid-cols-3 gap-6 h-[600px]">
-          {/* Conversations List */}
-          <Card className="lg:col-span-1">
+        <div className="grid lg:grid-cols-12 gap-6 h-[700px]">
+          {/* Left: Conversations List */}
+          <Card className="lg:col-span-3">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Users className="w-5 h-5" />
-                Conversations
+                Chats ({conversations.length})
               </CardTitle>
             </CardHeader>
             <CardContent className="p-0">
-              <ScrollArea className="h-[500px]">
+              <ScrollArea className="h-[600px]">
                 {loading ? (
-                  <div className="p-4 text-center text-muted-foreground">Loading conversations...</div>
+                  <div className="p-4 text-center text-muted-foreground">Loading...</div>
                 ) : conversations.length === 0 ? (
                   <div className="p-4 text-center text-muted-foreground">
                     <p className="mb-2">No conversations yet</p>
-                    <p className="text-sm">Connect with study partners to start chatting</p>
+                    <p className="text-sm">Connect with matches to start chatting</p>
                   </div>
                 ) : (
                   conversations.map((conv) => (
@@ -285,8 +376,8 @@ export default function ChatPage() {
             </CardContent>
           </Card>
 
-          {/* Messages Area */}
-          <Card className="lg:col-span-2 flex flex-col">
+          {/* Center: Messages Area */}
+          <Card className="lg:col-span-5 flex flex-col">
             {selectedConversation ? (
               <>
                 <CardHeader className="border-b">
@@ -343,6 +434,102 @@ export default function ChatPage() {
                 </div>
               </CardContent>
             )}
+          </Card>
+
+          {/* Right: Potential Matches Discovery */}
+          <Card className="lg:col-span-4">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Heart className="w-5 h-5 text-[#8B1538]" />
+                Discover ({potentialMatches.length})
+              </CardTitle>
+              <p className="text-xs text-muted-foreground">Use ← → arrows to browse</p>
+            </CardHeader>
+            <CardContent className="p-4">
+              {potentialMatches.length === 0 ? (
+                <div className="text-center py-12 text-muted-foreground">
+                  <Users className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                  <p className="text-sm">No new matches available</p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {/* Navigation Buttons */}
+                  <div className="flex items-center justify-between">
+                    <Button
+                      onClick={() => setSelectedMatchIndex((prev) => Math.max(0, prev - 1))}
+                      disabled={selectedMatchIndex === 0}
+                      size="sm"
+                      variant="outline"
+                    >
+                      <ChevronUp className="w-4 h-4" />
+                    </Button>
+                    <span className="text-sm text-muted-foreground">
+                      {selectedMatchIndex + 1} / {potentialMatches.length}
+                    </span>
+                    <Button
+                      onClick={() => setSelectedMatchIndex((prev) => Math.min(potentialMatches.length - 1, prev + 1))}
+                      disabled={selectedMatchIndex === potentialMatches.length - 1}
+                      size="sm"
+                      variant="outline"
+                    >
+                      <ChevronDown className="w-4 h-4" />
+                    </Button>
+                  </div>
+
+                  {/* Match Card */}
+                  {currentMatch && (
+                    <div className="border-2 rounded-lg p-4 space-y-4">
+                      <div className="text-center">
+                        <Avatar className="w-20 h-20 mx-auto mb-3">
+                          <AvatarFallback className="bg-[#8B1538] text-white text-2xl">
+                            {getInitials(currentMatch.full_name)}
+                          </AvatarFallback>
+                        </Avatar>
+                        <h3 className="font-bold text-lg">{currentMatch.full_name}</h3>
+                        <p className="text-sm text-muted-foreground">{currentMatch.major}</p>
+                        <Badge className="mt-2 bg-green-500 hover:bg-green-600">
+                          {currentMatch.match_score}% Match
+                        </Badge>
+                      </div>
+
+                      {currentMatch.common_courses.length > 0 && (
+                        <div>
+                          <h4 className="text-sm font-semibold mb-2 flex items-center gap-2">
+                            <BookOpen className="w-4 h-4 text-[#8B1538]" />
+                            Common Courses
+                          </h4>
+                          <div className="flex flex-wrap gap-1">
+                            {currentMatch.common_courses.map((course) => (
+                              <Badge key={course} variant="secondary" className="text-xs">
+                                {course}
+                              </Badge>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      <div className="flex gap-2">
+                        <Button
+                          onClick={() => setSelectedMatchIndex((prev) => prev + 1)}
+                          variant="outline"
+                          className="flex-1"
+                        >
+                          <X className="w-4 h-4 mr-1" />
+                          Pass
+                        </Button>
+                        <Button
+                          onClick={() => handleConnectMatch(currentMatch.user_id)}
+                          className="flex-1 bg-[#8B1538] hover:bg-[#A91D3A]"
+                        >
+                          <Heart className="w-4 h-4 mr-1" />
+                          Connect
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+            </CardContent>
           </Card>
         </div>
       </main>

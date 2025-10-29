@@ -6,7 +6,8 @@ import Link from "next/link"
 import { getSupabaseBrowserClient } from "@/lib/supabase/client"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { LogOut, User, Users, MessageSquare, BookOpen, FileText, Trophy, Sparkles } from "lucide-react"
+import { Badge } from "@/components/ui/badge"
+import { LogOut, User, Users, MessageSquare, BookOpen, FileText, Trophy, Sparkles, Bell, MapPin } from "lucide-react"
 
 export default function DashboardPage() {
   const router = useRouter()
@@ -14,6 +15,7 @@ export default function DashboardPage() {
   const [email, setEmail] = useState<string | null>(null)
   const [profile, setProfile] = useState<any | null>(null)
   const [loading, setLoading] = useState(true)
+  const [notificationCount, setNotificationCount] = useState(0)
 
   useEffect(() => {
     const init = async () => {
@@ -26,18 +28,37 @@ export default function DashboardPage() {
       }
       setEmail(user.email)
 
-      const { data: prof } = await supabase
-        .from("user_profiles")
-        .select("*")
-        .eq("user_id", user.id)
-        .single()
+      const { data: prof } = await supabase.from("user_profiles").select("*").eq("user_id", user.id).single()
 
       setProfile(prof ?? null)
+
+      await loadNotificationCount(user.id)
+
       setLoading(false)
     }
 
     void init()
   }, [])
+
+  const loadNotificationCount = async (userId: string) => {
+    try {
+      const { count: pendingConnections } = await supabase
+        .from("connections")
+        .select("*", { count: "exact", head: true })
+        .eq("user_id_2", userId)
+        .eq("status", "pending")
+
+      const { count: unreadMessages } = await supabase
+        .from("messages")
+        .select("*", { count: "exact", head: true })
+        .eq("receiver_id", userId)
+        .gte("created_at", new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString())
+
+      setNotificationCount((pendingConnections || 0) + (unreadMessages || 0))
+    } catch (err) {
+      console.error("[v0] Error loading notification count:", err)
+    }
+  }
 
   const handleSignOut = async () => {
     await supabase.auth.signOut()
@@ -54,7 +75,6 @@ export default function DashboardPage() {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Header */}
       <header className="border-b bg-white">
         <div className="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
           <div className="flex items-center gap-2">
@@ -64,6 +84,17 @@ export default function DashboardPage() {
             <h1 className="text-xl font-bold">skill swap</h1>
           </div>
           <div className="flex items-center gap-4">
+            <Button asChild variant="ghost" size="sm" className="relative">
+              <Link href="/dashboard/notifications">
+                <Bell className="w-4 h-4 mr-2" />
+                Notifications
+                {notificationCount > 0 && (
+                  <Badge className="ml-2 bg-red-500 hover:bg-red-600 text-white px-2 py-0 h-5 min-w-5">
+                    {notificationCount}
+                  </Badge>
+                )}
+              </Link>
+            </Button>
             <Button asChild variant="ghost" size="sm">
               <Link href="/dashboard/achievements">
                 <Trophy className="w-4 h-4 mr-2" />
@@ -79,7 +110,6 @@ export default function DashboardPage() {
         </div>
       </header>
 
-      {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 py-8">
         <div className="mb-8">
           <h2 className="text-3xl font-bold mb-2">Welcome to Your Dashboard</h2>
@@ -164,6 +194,21 @@ export default function DashboardPage() {
             <CardContent>
               <Button asChild className="w-full bg-transparent" variant="outline">
                 <Link href="/dashboard/reviews">View Reviews</Link>
+              </Button>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <div className="w-12 h-12 bg-green-600 rounded-lg flex items-center justify-center mb-2">
+                <MapPin className="w-6 h-6 text-white" />
+              </div>
+              <CardTitle>Study Locations</CardTitle>
+              <CardDescription>Find the best places to study on campus</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Button asChild className="w-full bg-transparent" variant="outline">
+                <Link href="/dashboard/study-locations">View Map</Link>
               </Button>
             </CardContent>
           </Card>

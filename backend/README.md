@@ -7,10 +7,10 @@ A minimal Node.js + TypeScript API using Express and Supabase.
 1. Copy .env.example to .env and fill values (reuse your existing SUPABASE_URL and ANON key).
 2. Install deps and run:
 
-```bash
+\`\`\`bash
 npm install
 npm run dev
-```
+\`\`\`
 
 The server runs on http://localhost:4000 by default.
 
