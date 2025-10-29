@@ -1,12 +1,15 @@
 "use client"
 
 import { useState } from "react"
+import dynamic from "next/dynamic"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { MapComponent } from "@/components/map-component"
 import { ArrowLeft, MapPin, Library, Coffee, Users, Clock } from "lucide-react"
 import Link from "next/link"
+
+// Avoid SSR for Leaflet map (references window/document)
+const MapComponent = dynamic(() => import("@/components/map-component").then(m => m.MapComponent), { ssr: false })
 
 interface StudyLocation {
   id: string
