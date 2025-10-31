@@ -74,37 +74,37 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background overflow-x-hidden">
       <header className="border-b bg-white">
-        <div className="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-2">
+        <div className="max-w-7xl mx-auto px-4 py-4 flex flex-wrap items-center justify-between gap-2">
+          <div className="flex items-center gap-2 min-w-0">
             <div className="w-8 h-8 bg-[#8B1538] rounded-lg flex items-center justify-center">
               <BookOpen className="w-5 h-5 text-white" />
             </div>
             <h1 className="text-xl font-bold">skill swap</h1>
           </div>
-          <div className="flex items-center gap-4">
-            <Button asChild variant="ghost" size="sm" className="relative">
-              <Link href="/dashboard/notifications">
-                <Bell className="w-4 h-4 mr-2" />
-                Notifications
+          <div className="flex items-center gap-2 sm:gap-4 flex-wrap justify-end min-w-0 max-w-full">
+            <Button asChild variant="ghost" size="sm" className="relative px-2 sm:px-3">
+              <Link href="/dashboard/notifications" className="inline-flex items-center">
+                <Bell className="w-4 h-4 sm:mr-2" />
+                <span className="hidden sm:inline">Notifications</span>
                 {notificationCount > 0 && (
-                  <Badge className="ml-2 bg-red-500 hover:bg-red-600 text-white px-2 py-0 h-5 min-w-5">
+                  <Badge className="ml-1 sm:ml-2 bg-red-500 hover:bg-red-600 text-white px-2 py-0 h-5 min-w-5">
                     {notificationCount}
                   </Badge>
                 )}
               </Link>
             </Button>
-            <Button asChild variant="ghost" size="sm">
-              <Link href="/dashboard/achievements">
-                <Trophy className="w-4 h-4 mr-2" />
-                Achievements
+            <Button asChild variant="ghost" size="sm" className="px-2 sm:px-3">
+              <Link href="/dashboard/achievements" className="inline-flex items-center">
+                <Trophy className="w-4 h-4 sm:mr-2" />
+                <span className="hidden sm:inline">Achievements</span>
               </Link>
             </Button>
-            <span className="text-sm text-muted-foreground">{email}</span>
-            <Button onClick={handleSignOut} variant="outline" size="sm">
-              <LogOut className="w-4 h-4 mr-2" />
-              Sign Out
+            <span className="hidden sm:inline-block max-w-[160px] truncate text-sm text-muted-foreground">{email}</span>
+            <Button onClick={handleSignOut} variant="outline" size="sm" className="px-2 sm:px-3">
+              <LogOut className="w-4 h-4 sm:mr-2" />
+              <span className="hidden sm:inline">Sign Out</span>
             </Button>
           </div>
         </div>

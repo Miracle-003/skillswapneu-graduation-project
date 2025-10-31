@@ -11,6 +11,11 @@ export const metadata: Metadata = {
   title: "skill swap - Find Your Perfect Study Partner",
   description: "Connect with peers, collaborate on projects, and achieve academic excellence together",
   generator: "v0.app",
+  icons: {
+    icon: "/favicon.png",
+    shortcut: "/favicon.png",
+    apple: "/favicon.png",
+  },
 }
 
 export default function RootLayout({
