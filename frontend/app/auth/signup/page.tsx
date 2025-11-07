@@ -10,8 +10,8 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { getSupabaseBrowserClient } from "@/lib/supabase/client"
 import { BookOpen } from "lucide-react"
+import { authService } from "@/lib/api/services/auth.service"
 
 export default function SignupPage() {
   const [email, setEmail] = useState("")
@@ -21,7 +21,6 @@ export default function SignupPage() {
   const [success, setSuccess] = useState(false)
   const [loading, setLoading] = useState(false)
   const router = useRouter()
-  const supabase = getSupabaseBrowserClient()
 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -42,35 +41,20 @@ export default function SignupPage() {
     }
 
     try {
-      const redirectUrl = process.env.NEXT_PUBLIC_SITE_URL
-        ? `${process.env.NEXT_PUBLIC_SITE_URL}/dashboard`
-        : `${window.location.origin}/dashboard`
+      console.log("[fe] Attempting backend signup with email:", email)
 
-      console.log("[v0] Signup redirect URL:", redirectUrl)
-      console.log("[v0] Attempting signup with email:", email)
+      await authService.register({ email, password })
 
-      const { data, error } = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          emailRedirectTo: redirectUrl,
-        },
-      })
-
-      if (error) {
-        console.log("[v0] Signup error:", error)
-        throw error
-      }
-
-      console.log("[v0] Signup successful")
+      console.log("[fe] Signup successful; verification email sent")
       setSuccess(true)
+      // After verification, user can log in normally; redirect to login soon
       setTimeout(() => {
-        router.push("/dashboard")
+        router.push("/auth/login")
         router.refresh()
       }, 2000)
     } catch (err: any) {
-      console.error("[v0] Signup failed:", err)
-      setError(err.message || "Failed to create account")
+      console.error("[fe] Signup failed:", err)
+      setError(err.response?.data?.error || err.message || "Failed to create account")
     } finally {
       setLoading(false)
     }

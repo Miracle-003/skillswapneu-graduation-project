@@ -9,8 +9,8 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { getSupabaseBrowserClient } from "@/lib/supabase/client"
 import { BookOpen } from "lucide-react"
+import { authService } from "@/lib/api/services/auth.service"
 
 export default function LoginPage() {
   const [email, setEmail] = useState("")
@@ -18,32 +18,30 @@ export default function LoginPage() {
   const [error, setError] = useState("")
   const [loading, setLoading] = useState(false)
   const router = useRouter()
-  const supabase = getSupabaseBrowserClient()
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
     setError("")
     setLoading(true)
 
-    console.log("[v0] Attempting login with email:", email)
+    console.log("[fe] Attempting backend login with email:", email)
 
     try {
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      })
+      const response = await authService.login({ email, password })
 
-      if (error) {
-        console.log("[v0] Login error:", error)
-        throw error
+      // Save JWT for axios to use on subsequent requests
+      if (typeof window !== "undefined") {
+        localStorage.setItem("auth_token", response.token)
       }
 
-      console.log("[v0] Login successful, redirecting to dashboard")
-      router.push("/dashboard")
+      // Redirect by role
+      const dest = response.user?.role === "admin" ? "/admin" : "/dashboard"
+      console.log("[fe] Login successful, redirecting to:", dest)
+      router.push(dest)
       router.refresh()
     } catch (err: any) {
-      console.error("[v0] Login failed:", err)
-      setError(err.message || "Failed to sign in")
+      console.error("[fe] Login failed:", err)
+      setError(err.response?.data?.error || err.message || "Failed to sign in")
     } finally {
       setLoading(false)
     }

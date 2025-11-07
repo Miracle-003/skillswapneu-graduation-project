@@ -1,7 +1,11 @@
 import express from "express"
 import { prisma } from "../lib/prisma.js"
+import { requireAuth } from "../middleware/requireAuth.js"
 
 const router = express.Router()
+
+// All message routes require auth
+router.use(requireAuth)
 
 // Get messages between two users
 router.get("/:userId1/:userId2", async (req, res) => {

@@ -1,8 +1,17 @@
 import axios from "axios"
 
+// Resolve baseURL with sane fallbacks and normalization
+function resolveBaseURL() {
+  const apiEnv = (process.env.NEXT_PUBLIC_API_URL || "").trim()
+  if (apiEnv) return apiEnv.replace(/\/+$/, "")
+  const backend = (process.env.NEXT_PUBLIC_BACKEND_URL || process.env.BACKEND_URL || "").trim()
+  if (backend) return backend.replace(/\/+$/, "") + "/api"
+  return "/api"
+}
+
 // Create axios instance with default config
 export const apiClient = axios.create({
-  baseURL: process.env.NEXT_PUBLIC_API_URL || "/api",
+  baseURL: resolveBaseURL(),
   timeout: 10000,
   headers: {
     "Content-Type": "application/json",

@@ -4,7 +4,7 @@ import type React from "react"
 import { useState } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { getSupabaseBrowserClient } from "@/lib/supabase/client"
+import { authService } from "@/lib/api/services/auth.service"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -13,7 +13,6 @@ import { Alert, AlertDescription } from "@/components/ui/alert"
 import { BookOpen } from "lucide-react"
 
 export default function ForgotPasswordPage() {
-  const supabase = getSupabaseBrowserClient()
   const router = useRouter()
   const [email, setEmail] = useState("")
   const [loading, setLoading] = useState(false)
@@ -27,14 +26,7 @@ export default function ForgotPasswordPage() {
     setLoading(true)
 
     try {
-      const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || window.location.origin
-      const redirectTo = `${siteUrl}/auth/reset-password`
-
-      const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo,
-      })
-      if (error) throw error
-
+      await authService.forgotPassword(email)
       setSent(true)
     } catch (err: any) {
       setError(err.message || "Failed to send reset link")

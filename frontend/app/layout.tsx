@@ -23,8 +23,25 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode
 }>) {
+  const apiUrl = process.env.NEXT_PUBLIC_API_URL
+  let backendOrigin: string | null = null
+  try {
+    if (apiUrl) backendOrigin = new URL(apiUrl).origin
+  } catch {}
+  if (!backendOrigin && process.env.BACKEND_URL) {
+    backendOrigin = process.env.BACKEND_URL
+  }
+
   return (
     <html lang="en">
+      <head>
+        {backendOrigin ? (
+          <>
+            <link rel="preconnect" href={backendOrigin} />
+            <link rel="dns-prefetch" href={backendOrigin} />
+          </>
+        ) : null}
+      </head>
       <body className={`font-sans antialiased`}>
         {children}
         <Analytics />

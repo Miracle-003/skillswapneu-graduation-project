@@ -1,7 +1,11 @@
 import express from "express"
 import { prisma } from "../lib/prisma.js"
+import { requireAuth } from "../middleware/requireAuth.js"
 
 const router = express.Router()
+
+// All profile routes require auth (JWT in Authorization header)
+router.use(requireAuth)
 
 // Get all profiles
 router.get("/", async (req, res) => {

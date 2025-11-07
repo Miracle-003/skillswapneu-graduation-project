@@ -3,10 +3,12 @@ import cors from "cors"
 import helmet from "helmet"
 import morgan from "morgan"
 import dotenv from "dotenv"
+import compression from "compression"
 import authRoutes from "./routes/auth.js"
 import profileRoutes from "./routes/profiles.js"
 import matchRoutes from "./routes/matches.js"
 import messageRoutes from "./routes/messages.js"
+import adminRoutes from "./routes/admin.js"
 
 dotenv.config()
 
@@ -14,6 +16,7 @@ const app = express()
 const PORT = process.env.PORT || 3001
 
 // Middleware
+app.use(compression())
 app.use(helmet())
 app.use(cors())
 app.use(express.json())
@@ -29,6 +32,7 @@ app.use("/api/auth", authRoutes)
 app.use("/api/profiles", profileRoutes)
 app.use("/api/matches", matchRoutes)
 app.use("/api/messages", messageRoutes)
+app.use("/api/admin", adminRoutes)
 
 // Error handler
 app.use((err, req, res, next) => {

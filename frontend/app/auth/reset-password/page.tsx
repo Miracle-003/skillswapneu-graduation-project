@@ -2,9 +2,9 @@
 
 import type React from "react"
 import { useEffect, useState } from "react"
-import { useRouter } from "next/navigation"
+import { useRouter, useSearchParams } from "next/navigation"
 import Link from "next/link"
-import { getSupabaseBrowserClient } from "@/lib/supabase/client"
+import { authService } from "@/lib/api/services/auth.service"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -13,38 +13,23 @@ import { Alert, AlertDescription } from "@/components/ui/alert"
 import { BookOpen } from "lucide-react"
 
 export default function ResetPasswordPage() {
-  const supabase = getSupabaseBrowserClient()
   const router = useRouter()
+  const params = useSearchParams()
 
   const [password, setPassword] = useState("")
   const [confirmPassword, setConfirmPassword] = useState("")
   const [error, setError] = useState("")
   const [loading, setLoading] = useState(false)
-  const [hasSession, setHasSession] = useState<boolean | null>(null)
   const [success, setSuccess] = useState(false)
+  const [id, setId] = useState<string | null>(null)
+  const [secret, setSecret] = useState<string | null>(null)
 
   useEffect(() => {
-    const run = async () => {
-      const url = new URL(window.location.href)
-      const code = url.searchParams.get("code")
-      const error = url.searchParams.get("error")
-      if (error) {
-        setHasSession(false)
-        return
-      }
-      if (code) {
-        // Exchange OTP code for a session to allow password update
-        const { error: exchError } = await supabase.auth.exchangeCodeForSession({ code })
-        if (exchError) {
-          setHasSession(false)
-          return
-        }
-      }
-      const { data } = await supabase.auth.getSession()
-      setHasSession(!!data.session)
-    }
-    run()
-  }, [])
+    const idQ = params.get("id")
+    const secretQ = params.get("secret")
+    setId(idQ)
+    setSecret(secretQ)
+  }, [params])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -61,12 +46,16 @@ export default function ResetPasswordPage() {
 
     setLoading(true)
     try {
-      const { error } = await supabase.auth.updateUser({ password })
-      if (error) throw error
+      if (!id || !secret) {
+        setError("Invalid or expired link")
+        setLoading(false)
+        return
+      }
+      await authService.resetPassword({ id, secret, password })
       setSuccess(true)
-      setTimeout(() => router.push("/dashboard"), 1500)
+      setTimeout(() => router.push("/auth/login"), 1500)
     } catch (err: any) {
-      setError(err.message || "Failed to reset password")
+      setError(err.response?.data?.error || err.message || "Failed to reset password")
     } finally {
       setLoading(false)
     }
@@ -85,7 +74,7 @@ export default function ResetPasswordPage() {
           <CardDescription>Choose a new password for your account</CardDescription>
         </CardHeader>
 
-        {hasSession === false && (
+        {!id || !secret ? (
           <CardContent>
             <Alert variant="destructive">
               <AlertDescription>
@@ -95,9 +84,7 @@ export default function ResetPasswordPage() {
               </AlertDescription>
             </Alert>
           </CardContent>
-        )}
-
-        {hasSession && (
+        ) : (
           <form onSubmit={handleSubmit}>
             <CardContent className="space-y-4">
               {error && (
