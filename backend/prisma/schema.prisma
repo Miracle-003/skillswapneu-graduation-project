@@ -5,7 +5,6 @@ generator client {
 datasource db {
   provider  = "postgresql"
   url       = env("SUPABASE_POSTGRES_PRISMA_URL")
-  directUrl = env("SUPABASE_POSTGRES_URL_NON_POOLING")
   // Only manage the public schema; Supabase's auth schema is not Prisma-managed
   schemas   = ["public"]
 }

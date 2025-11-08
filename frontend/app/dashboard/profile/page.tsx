@@ -10,7 +10,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Badge } from "@/components/ui/badge"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { getSupabaseBrowserClient } from "@/lib/supabase/client"
+import { useRequireAuth } from "@/lib/api/hooks/useRequireAuth"
+import { profileService } from "@/lib/api/services/profile.service"
 import { ArrowLeft, Plus, X } from "lucide-react"
 import Link from "next/link"
 
@@ -50,7 +51,7 @@ export default function ProfilePage() {
   const [userId, setUserId] = useState<string | null>(null)
 
   const router = useRouter()
-  const supabase = getSupabaseBrowserClient()
+  const { user } = useRequireAuth()
 
   useEffect(() => {
     loadProfile()
@@ -58,26 +59,18 @@ export default function ProfilePage() {
 
   const loadProfile = async () => {
     try {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser()
       if (!user) return
-
       setUserId(user.id)
-
-      const { data, error } = await supabase.from("user_profiles").select("*").eq("user_id", user.id).single()
-
-      if (error && error.code !== "PGRST116") throw error
-
+      const data = await profileService.getById(user.id)
       if (data) {
         setProfile({
-          full_name: data.full_name || "",
+          full_name: data.fullName || "",
           major: data.major || "",
           year: data.year || "",
           bio: data.bio || "",
-          learning_style: data.learning_style || "",
-          study_preference: data.study_preference || "",
-          courses: data.courses || [],
+          learning_style: data.learningStyle || "",
+          study_preference: data.studyPreference || "",
+          courses: [],
           interests: data.interests || [],
         })
       }
@@ -93,25 +86,19 @@ export default function ProfilePage() {
 
     try {
       // Prefer previously loaded user id to avoid transient null from getUser()
-      let uid = userId
-      if (!uid) {
-        const { data: userRes } = await supabase.auth.getUser()
-        uid = userRes.user?.id || null
-      }
-      if (!uid) {
-        // Attempt to recover session (in case of a stale token)
-        const { data: sessionRes } = await supabase.auth.getSession()
-        uid = sessionRes.session?.user?.id || null
-      }
+      const uid = userId || user?.id
       if (!uid) throw new Error("Not authenticated")
 
-      const { error } = await supabase.from("user_profiles").upsert({
-        user_id: uid,
-        ...profile,
-        updated_at: new Date().toISOString(),
-      })
-
-      if (error) throw error
+      await profileService.upsert({
+        userId: uid,
+        fullName: profile.full_name,
+        major: profile.major,
+        year: profile.year,
+        bio: profile.bio,
+        learningStyle: profile.learning_style,
+        studyPreference: profile.study_preference,
+        interests: profile.interests,
+      } as any)
 
       setSuccess(true)
       setTimeout(() => router.push("/dashboard"), 1500)

@@ -9,6 +9,7 @@ import profileRoutes from "./routes/profiles.js"
 import matchRoutes from "./routes/matches.js"
 import messageRoutes from "./routes/messages.js"
 import adminRoutes from "./routes/admin.js"
+import connectionRoutes from "./routes/connections.js"
 
 dotenv.config()
 
@@ -33,6 +34,7 @@ app.use("/api/profiles", profileRoutes)
 app.use("/api/matches", matchRoutes)
 app.use("/api/messages", messageRoutes)
 app.use("/api/admin", adminRoutes)
+app.use("/api/connections", connectionRoutes)
 
 // Error handler
 app.use((err, req, res, next) => {

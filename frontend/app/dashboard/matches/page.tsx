@@ -6,7 +6,9 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { ScrollArea } from "@/components/ui/scroll-area"
-import { getSupabaseBrowserClient } from "@/lib/supabase/client"
+import { useRequireAuth } from "@/lib/api/hooks/useRequireAuth"
+import { profileService } from "@/lib/api/services/profile.service"
+import { apiClient } from "@/lib/api/axios-client"
 import { ArrowLeft, Heart, X, ChevronDown, BookOpen, Users, Sparkles } from "lucide-react"
 import Link from "next/link"
 import { motion, AnimatePresence } from "framer-motion"
@@ -33,7 +35,7 @@ export default function MatchesPage() {
   const [profileScroll, setProfileScroll] = useState(0)
   const [loading, setLoading] = useState(true)
   const [showMatchAnimation, setShowMatchAnimation] = useState(false)
-  const supabase = getSupabaseBrowserClient()
+  const { user } = useRequireAuth()
 
   useEffect(() => {
     loadMatches()
@@ -65,37 +67,25 @@ export default function MatchesPage() {
 
   const loadMatches = async () => {
     try {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser()
       if (!user) return
-
-      const { data: currentProfile } = await supabase.from("user_profiles").select("*").eq("user_id", user.id).single()
+      const currentProfile = await profileService.getById(user.id)
 
       if (!currentProfile) {
         setLoading(false)
         return
       }
 
-      const { data: existingConnections } = await supabase
-        .from("connections")
-        .select("user_id_2")
-        .eq("user_id_1", user.id)
+      const { data: existing } = await apiClient.get(`/connections/user/${user.id}?status=accepted`)
+      const connectedIds: string[] = (existing?.connections || [])
+        .map((c: any) => (c.userId1 === user.id ? c.userId2 : c.userId1))
 
-      const connectedIds = existingConnections?.map((c) => c.user_id_2) || []
-
-      const { data: allProfiles } = await supabase.from("user_profiles").select("*").neq("user_id", user.id).limit(50)
-
-      if (!allProfiles) {
-        setLoading(false)
-        return
-      }
+      const allProfiles = await profileService.getAll()
 
       const matchedProfiles = allProfiles
         .map((profile) => {
-          const commonCourses = profile.courses.filter((course: string) => currentProfile.courses.includes(course))
-          const commonInterests = profile.interests.filter((interest: string) =>
-            currentProfile.interests.includes(interest),
+          const commonCourses: string[] = []
+          const commonInterests = (profile.interests || []).filter((interest: string) =>
+            (currentProfile.interests || []).includes(interest),
           )
 
           let score = 0
@@ -129,18 +119,8 @@ export default function MatchesPage() {
     const match = matches[currentIndex]
 
     try {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser()
       if (!user) throw new Error("Not authenticated")
-
-      const { error } = await supabase.from("connections").insert({
-        user_id_1: user.id,
-        user_id_2: match.user_id,
-        status: "accepted",
-      })
-
-      if (error) throw error
+      await apiClient.post("/connections", { userId1: user.id, userId2: match.user_id, status: "accepted" })
 
       setShowMatchAnimation(true)
       setTimeout(() => {

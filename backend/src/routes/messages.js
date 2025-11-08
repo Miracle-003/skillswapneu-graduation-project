@@ -53,4 +53,20 @@ router.patch("/:id/read", async (req, res) => {
   }
 })
 
+// Recent messages received by a user
+router.get("/recent/:userId", async (req, res) => {
+  try {
+    const { userId } = req.params
+    const limit = Math.min(parseInt(String(req.query.limit || "20")) || 20, 100)
+    const msgs = await prisma.message.findMany({
+      where: { receiverId: userId },
+      orderBy: { createdAt: "desc" },
+      take: limit,
+    })
+    res.json(msgs)
+  } catch (error) {
+    res.status(400).json({ error: error.message })
+  }
+})
+
 export default router

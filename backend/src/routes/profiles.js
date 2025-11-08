@@ -37,12 +37,35 @@ router.get("/:id", async (req, res) => {
 // Create/Update profile
 router.post("/", async (req, res) => {
   try {
-    const { userId, ...profileData } = req.body
+    const { userId } = req.body || {}
+    if (!userId) return res.status(400).json({ error: "userId is required" })
+
+    // Whitelist fields and map from camelCase to schema fields
+    const {
+      fullName,
+      major,
+      year,
+      bio,
+      learningStyle,
+      studyPreference,
+      interests,
+    } = req.body || {}
+
+    const data = {
+      ...(fullName !== undefined ? { fullName } : {}),
+      ...(major !== undefined ? { major } : {}),
+      ...(year !== undefined ? { year } : {}),
+      ...(bio !== undefined ? { bio } : {}),
+      ...(learningStyle !== undefined ? { learningStyle } : {}),
+      ...(studyPreference !== undefined ? { studyPreference } : {}),
+      ...(Array.isArray(interests) ? { interests } : {}),
+      updatedAt: new Date(),
+    }
 
     const profile = await prisma.userProfile.upsert({
       where: { userId },
-      update: profileData,
-      create: { userId, ...profileData },
+      update: data,
+      create: { userId, ...data },
     })
 
     res.json(profile)

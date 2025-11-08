@@ -3,7 +3,9 @@
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
-import { getSupabaseBrowserClient } from "@/lib/supabase/client"
+import { authService } from "@/lib/api/services/auth.service"
+import { profileService } from "@/lib/api/services/profile.service"
+import { useRequireAuth } from "@/lib/api/hooks/useRequireAuth"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -11,7 +13,7 @@ import { LogOut, User, Users, MessageSquare, BookOpen, FileText, Trophy, Sparkle
 
 export default function DashboardPage() {
   const router = useRouter()
-  const supabase = getSupabaseBrowserClient()
+  const { user, loading: authLoading } = useRequireAuth()
   const [email, setEmail] = useState<string | null>(null)
   const [profile, setProfile] = useState<any | null>(null)
   const [loading, setLoading] = useState(true)
@@ -19,53 +21,32 @@ export default function DashboardPage() {
 
   useEffect(() => {
     const init = async () => {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser()
-      if (!user) {
-        router.replace("/auth/login")
-        return
-      }
+      if (!user) return
       setEmail(user.email)
-
-      const { data: prof } = await supabase.from("user_profiles").select("*").eq("user_id", user.id).single()
-
-      setProfile(prof ?? null)
-
-      await loadNotificationCount(user.id)
-
-      setLoading(false)
+      try {
+        const prof = await profileService.getById(user.id)
+        setProfile(prof)
+        await loadNotificationCount(user.id)
+      } finally {
+        setLoading(false)
+      }
     }
-
     void init()
-  }, [])
+  }, [user])
 
-  const loadNotificationCount = async (userId: string) => {
+  const loadNotificationCount = async (_userId: string) => {
     try {
-      const { count: pendingConnections } = await supabase
-        .from("connections")
-        .select("*", { count: "exact", head: true })
-        .eq("user_id_2", userId)
-        .eq("status", "pending")
-
-      const { count: unreadMessages } = await supabase
-        .from("messages")
-        .select("*", { count: "exact", head: true })
-        .eq("receiver_id", userId)
-        .gte("created_at", new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString())
-
-      setNotificationCount((pendingConnections || 0) + (unreadMessages || 0))
-    } catch (err) {
-      console.error("[v0] Error loading notification count:", err)
-    }
+      // Placeholder until backend metrics endpoint exists
+      setNotificationCount(0)
+    } catch {}
   }
 
   const handleSignOut = async () => {
-    await supabase.auth.signOut()
+    if (typeof window !== "undefined") localStorage.removeItem("auth_token")
     router.push("/auth/login")
   }
 
-  if (loading) {
+  if (loading || authLoading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <p className="text-muted-foreground">Loading...</p>

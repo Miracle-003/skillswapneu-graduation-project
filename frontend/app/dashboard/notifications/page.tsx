@@ -6,7 +6,7 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { getSupabaseBrowserClient } from "@/lib/supabase/client"
+import { useRequireAuth } from "@/lib/api/hooks/useRequireAuth"
 import { ArrowLeft, Bell, MessageSquare, Users, Check, X } from "lucide-react"
 import Link from "next/link"
 import { formatDistanceToNow } from "date-fns"
@@ -27,25 +27,21 @@ export default function NotificationsPage() {
   const [notifications, setNotifications] = useState<Notification[]>([])
   const [loading, setLoading] = useState(true)
   const [filter, setFilter] = useState<"all" | "unread">("all")
-  const supabase = getSupabaseBrowserClient()
+  const { user } = useRequireAuth()
 
   useEffect(() => {
     loadNotifications()
-    subscribeToNotifications()
-  }, [])
+  }, [user])
 
   const loadNotifications = async () => {
     try {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser()
       if (!user) return
 
       const notificationsList: Notification[] = []
 
       // Load connection requests (match requests)
-      const { data: connections } = await supabase
-        .from("connections")
+      // TODO: replace with backend connections service
+      const connections: any[] = []
         .select("*, user_profiles!connections_user_id_1_fkey(full_name)")
         .eq("user_id_2", user.id)
         .eq("status", "pending")
@@ -67,8 +63,8 @@ export default function NotificationsPage() {
       }
 
       // Load recent messages
-      const { data: recentMessages } = await supabase
-        .from("messages")
+      // TODO: replace with backend recent messages service
+      const recentMessages: any[] = []
         .select("*, sender:user_profiles!messages_sender_id_fkey(full_name)")
         .eq("receiver_id", user.id)
         .order("created_at", { ascending: false })
@@ -101,8 +97,8 @@ export default function NotificationsPage() {
   }
 
   const subscribeToNotifications = () => {
-    const channel = supabase
-      .channel("notifications")
+    // TODO: replace with SSE/websocket later. No-op for now.
+    return () => {}
       .on(
         "postgres_changes",
         {
