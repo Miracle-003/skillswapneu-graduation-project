@@ -18,6 +18,8 @@ model UserProfile {
   learningStyle   String?                @map("learning_style")
   studyPreference String?                @map("study_preference")
   interests       String[]               @default([])
+  // Preserve existing DB column to avoid data loss during db push
+  courses         String[]?
   createdAt       DateTime               @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt       DateTime               @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
   connectionsAs1  Connection[]           @relation("connections_user1")
