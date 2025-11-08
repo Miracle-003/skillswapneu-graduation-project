@@ -7,7 +7,7 @@
   },
   "scripts": {
     "dev": "node --watch src/index.js",
-    "start": "sh -c 'prisma migrate deploy || prisma db push --accept-data-loss --skip-generate' && node src/index.js",
+"start": "sh -c 'prisma migrate deploy || prisma db push --accept-data-loss --skip-generate || true' && node src/index.js",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
     "prisma:deploy": "prisma migrate deploy",
