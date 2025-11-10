@@ -97,37 +97,9 @@ export default function NotificationsPage() {
   }
 
   const subscribeToNotifications = () => {
-    // TODO: replace with SSE/websocket later. No-op for now.
+    // TODO: implement realtime (SSE/WebSocket) later
+    // For now, return a no-op unsubscribe function to avoid build/runtime errors.
     return () => {}
-      .on(
-        "postgres_changes",
-        {
-          event: "INSERT",
-          schema: "public",
-          table: "messages",
-        },
-        () => {
-          loadNotifications()
-          toast.info("New message received!")
-        },
-      )
-      .on(
-        "postgres_changes",
-        {
-          event: "INSERT",
-          schema: "public",
-          table: "connections",
-        },
-        () => {
-          loadNotifications()
-          toast.info("New connection request!")
-        },
-      )
-      .subscribe()
-
-    return () => {
-      supabase.removeChannel(channel)
-    }
   }
 
   const handleAcceptConnection = async (notificationId: string, connectionId: string) => {
