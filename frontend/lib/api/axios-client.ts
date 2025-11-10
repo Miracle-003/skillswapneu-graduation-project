@@ -12,8 +12,8 @@ function resolveBaseURL() {
 // Create axios instance with default config
 export const apiClient = axios.create({
   baseURL: resolveBaseURL(),
-  // Increase timeout to accommodate cold starts on serverless hosts
-  timeout: 60000,
+  // Increase timeout to accommodate cold starts on serverless hosts and Render cold boots
+  timeout: 120000,
   headers: {
     "Content-Type": "application/json",
   },
