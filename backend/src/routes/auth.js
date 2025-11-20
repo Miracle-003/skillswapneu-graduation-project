@@ -2,7 +2,6 @@ import express from "express"
 import crypto from "crypto"
 import argon2 from "argon2"
 import { prisma } from "../lib/prisma.js"
-import { sendVerificationEmail, sendPasswordResetEmail } from "../lib/email.js"
 import { validateEmailAddress } from "../lib/emailValidation.js"
 import { signAuthToken } from "../lib/jwt.js"
 import { requireAuth } from "../middleware/requireAuth.js"
@@ -43,20 +42,13 @@ router.post("/register", async (req, res) => {
       user = await prisma.appUser.create({ data: { email, passwordHash, avatarUrl } })
     }
 
-    // Create 1-minute verification token (single-use)
-    const tokenId = crypto.randomUUID()
-    const secret = crypto.randomBytes(32).toString("base64url")
-    const secretHash = await argon2.hash(secret, { type: argon2.argon2id })
-    const expiresAt = new Date(Date.now() + 60 * 1000)
-    const linkUrl = buildVerifyLink({ tokenId, secret })
+    // Email verification disabled for now; mark verified immediately
+    if (!user.emailVerifiedAt) {
+      user = await prisma.appUser.update({ where: { id: user.id }, data: { emailVerifiedAt: new Date() } })
+    }
 
-    await prisma.emailVerificationToken.create({
-      data: { tokenId, secretHash, userId: user.id, email: user.email, linkUrl, expiresAt },
-    })
-
-    await sendVerificationEmail({ to: user.email, link: linkUrl })
-
-    return res.status(201).json({ message: "Verification email sent", expiresInSeconds: 60 })
+    return res.status(201).json({ message: "Account created", user: { id: user.id, email: user.email } })
+    return res.status(201).json({ message: "Verification email sent", expiresInSeconds: ttlSec })
   } catch (error) {
     console.error(error)
     return res.status(400).json({ error: error.message || "Failed to register" })
@@ -133,18 +125,7 @@ router.post("/forgot", async (req, res) => {
     // Always respond 200 to avoid user enumeration
     if (!user) return res.json({ message: "If that account exists, we've emailed a reset link" })
 
-    const tokenId = crypto.randomUUID()
-    const secret = crypto.randomBytes(32).toString("base64url")
-    const secretHash = await argon2.hash(secret, { type: argon2.argon2id })
-    const expiresAt = new Date(Date.now() + 15 * 60 * 1000) // 15 minutes
-    const linkUrl = buildResetLink({ tokenId, secret })
-
-    await prisma.emailVerificationToken.create({
-      data: { tokenId, secretHash, userId: user.id, email: user.email, linkUrl, expiresAt },
-    })
-
-    await sendPasswordResetEmail({ to: user.email, link: linkUrl })
-
+    // Password reset email disabled for now
     return res.json({ message: "If that account exists, we've emailed a reset link" })
   } catch (error) {
     console.error(error)
