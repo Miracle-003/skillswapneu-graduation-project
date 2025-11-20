@@ -6,6 +6,7 @@ import { prisma } from "../lib/prisma.js"
 import { validateEmailAddress } from "../lib/emailValidation.js"
 import { signAuthToken } from "../lib/jwt.js"
 import { requireAuth } from "../middleware/requireAuth.js"
+import { sendVerificationEmail, sendPasswordResetEmail } from "../lib/email.js"
 
 const router = express.Router()
 
@@ -47,14 +48,25 @@ router.post("/register", async (req, res) => {
       console.log("[auth] user created", { id: user.id })
     }
 
-    // Email verification disabled for now; mark verified immediately
-    if (!user.emailVerifiedAt) {
-      user = await prisma.appUser.update({ where: { id: user.id }, data: { emailVerifiedAt: new Date() } })
-      console.log("[auth] user verified", { id: user.id })
-    }
+    // Create verification token (single-use)
+    const tokenId = crypto.randomUUID()
+    const secret = crypto.randomBytes(32).toString("base64url")
+    const secretHash = await argon2.hash(secret, { type: argon2.argon2id })
+    const ttlSec = Number(process.env.EMAIL_VERIFICATION_TTL_SECONDS || 120)
+    const expiresAt = new Date(Date.now() + ttlSec * 1000)
+    const linkUrl = buildVerifyLink({ tokenId, secret })
+
+    await prisma.emailVerificationToken.create({
+      data: { tokenId, secretHash, userId: user.id, email: user.email, linkUrl, expiresAt },
+    })
+
+    // Fire-and-forget email (do not block response)
+    sendVerificationEmail({ to: user.email, link: linkUrl }).catch((e) => {
+      console.warn("[auth] send verification email failed:", e?.message || e)
+    })
 
     console.log("[auth] register done", { id: user.id })
-    return res.status(201).json({ message: "Account created", user: { id: user.id, email: user.email } })
+    return res.status(201).json({ message: "Verification email sent", expiresInSeconds: ttlSec })
   } catch (error) {
     console.error("[auth] register error", error)
     return res.status(400).json({ error: error.message || "Failed to register" })
@@ -136,7 +148,20 @@ router.post("/forgot", async (req, res) => {
     // Always respond 200 to avoid user enumeration
     if (!user) return res.json({ message: "If that account exists, we've emailed a reset link" })
 
-    // Password reset email disabled for now
+    const tokenId = crypto.randomUUID()
+    const secret = crypto.randomBytes(32).toString("base64url")
+    const secretHash = await argon2.hash(secret, { type: argon2.argon2id })
+    const expiresAt = new Date(Date.now() + 15 * 60 * 1000)
+    const linkUrl = buildResetLink({ tokenId, secret })
+
+    await prisma.emailVerificationToken.create({
+      data: { tokenId, secretHash, userId: user.id, email: user.email, linkUrl, expiresAt },
+    })
+
+    sendPasswordResetEmail({ to: user.email, link: linkUrl }).catch((e) =>
+      console.warn("[auth] send reset email failed:", e?.message || e),
+    )
+
     return res.json({ message: "If that account exists, we've emailed a reset link" })
   } catch (error) {
     console.error(error)
