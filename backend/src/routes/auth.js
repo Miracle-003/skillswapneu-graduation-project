@@ -27,30 +27,35 @@ function buildResetLink({ tokenId, secret }) {
 router.post("/register", async (req, res) => {
   try {
     const { email, password, avatarUrl } = req.body || {}
+    console.log("[auth] register start", { email })
     if (!email || !password) return res.status(400).json({ error: "email and password are required" })
 
-    // Basic email checks incl. MX records
     const emailCheck = await validateEmailAddress(email)
+    console.log("[auth] email validated", emailCheck)
     if (!emailCheck.ok) return res.status(400).json({ error: `Invalid email: ${emailCheck.reason}` })
 
     const existing = await prisma.appUser.findUnique({ where: { email } })
+    console.log("[auth] existing?", !!existing)
     let user
     if (existing) {
       user = existing
     } else {
       const passwordHash = await argon2.hash(password, { type: argon2.argon2id })
+      console.log("[auth] password hashed")
       user = await prisma.appUser.create({ data: { email, passwordHash, avatarUrl } })
+      console.log("[auth] user created", { id: user.id })
     }
 
     // Email verification disabled for now; mark verified immediately
     if (!user.emailVerifiedAt) {
       user = await prisma.appUser.update({ where: { id: user.id }, data: { emailVerifiedAt: new Date() } })
+      console.log("[auth] user verified", { id: user.id })
     }
 
+    console.log("[auth] register done", { id: user.id })
     return res.status(201).json({ message: "Account created", user: { id: user.id, email: user.email } })
-    return res.status(201).json({ message: "Verification email sent", expiresInSeconds: ttlSec })
   } catch (error) {
-    console.error(error)
+    console.error("[auth] register error", error)
     return res.status(400).json({ error: error.message || "Failed to register" })
   }
 })
