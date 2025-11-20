@@ -1,6 +1,7 @@
 import express from "express"
 import crypto from "crypto"
 import argon2 from "argon2"
+import bcrypt from "bcrypt"
 import { prisma } from "../lib/prisma.js"
 import { validateEmailAddress } from "../lib/emailValidation.js"
 import { signAuthToken } from "../lib/jwt.js"
@@ -40,8 +41,8 @@ router.post("/register", async (req, res) => {
     if (existing) {
       user = existing
     } else {
-      const passwordHash = await argon2.hash(password, { type: argon2.argon2id })
-      console.log("[auth] password hashed")
+      const passwordHash = await bcrypt.hash(password, 10)
+      console.log("[auth] password hashed (bcrypt)")
       user = await prisma.appUser.create({ data: { email, passwordHash, avatarUrl } })
       console.log("[auth] user created", { id: user.id })
     }
@@ -99,7 +100,12 @@ router.post("/login", async (req, res) => {
     if (!user) return res.status(401).json({ error: "Invalid credentials" })
     if (!user.emailVerifiedAt) return res.status(401).json({ error: "Email not verified" })
 
-    const ok = await argon2.verify(user.passwordHash, password)
+    let ok = false
+    if (user.passwordHash?.startsWith("$argon2")) {
+      ok = await argon2.verify(user.passwordHash, password)
+    } else {
+      ok = await bcrypt.compare(password, user.passwordHash)
+    }
     if (!ok) return res.status(401).json({ error: "Invalid credentials" })
 
     const token = signAuthToken({ sub: user.id, email: user.email, role: user.role })
