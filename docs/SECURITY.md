@@ -498,7 +498,7 @@ Consider periodic penetration testing for:
 
 If you discover a security vulnerability:
 1. **Do NOT** open a public issue
-2. Email security@skillswap.com (or project maintainer)
+2. Contact the project maintainers privately via GitHub
 3. Provide detailed information
 4. Allow time for a fix before disclosure
 

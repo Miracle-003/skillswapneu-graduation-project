@@ -5,7 +5,7 @@
  */
 
 import { describe, test, expect, jest, beforeEach } from '@jest/globals';
-import { listProfiles, getProfile } from '../src/controllers/profiles.controller.js';
+import { listProfiles, getProfile } from '../src/controllers/profiles.controller.ts';
 import { createMockRequest, createMockResponse, generateTestProfile } from './utils.js';
 
 // Mock the Supabase module

@@ -365,7 +365,6 @@ Add screenshots here
 - 📖 Check the [documentation](./docs/)
 - 💬 Open a [GitHub Discussion](https://github.com/Miracle-003/skillswapneu-graduation-project/discussions)
 - 🐛 Report bugs via [GitHub Issues](https://github.com/Miracle-003/skillswapneu-graduation-project/issues)
-- 📧 Contact the team at [email]
 
 ## Code of Conduct
 

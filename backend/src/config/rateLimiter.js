@@ -1,22 +1,26 @@
 /**
  * Rate Limiting Configuration
  * 
- * This module provides rate limiting middleware to prevent abuse
+ * This module provides rate limiting middleware configuration to prevent abuse
  * of the SkillSwap API. Different endpoints have different limits
  * based on their sensitivity and expected usage.
  * 
- * To use this in your Express app:
- * 1. Install: npm install express-rate-limit
- * 2. Import and apply middleware
+ * NOTE: This is a configuration example. To use rate limiting, install:
+ *   npm install express-rate-limit
+ * 
+ * For production with multiple servers, also install:
+ *   npm install rate-limit-redis redis
  * 
  * @example
- * import { generalLimiter, authLimiter } from './middleware/rateLimiter.js';
+ * import rateLimit from 'express-rate-limit';
+ * import { generalLimiterConfig, authLimiterConfig } from './config/rateLimiter.js';
+ * 
+ * const generalLimiter = rateLimit(generalLimiterConfig);
+ * const authLimiter = rateLimit(authLimiterConfig);
+ * 
  * app.use('/api/', generalLimiter);
  * app.use('/api/auth/', authLimiter);
  */
-
-// Note: This is a configuration example. You'll need to install express-rate-limit:
-// npm install express-rate-limit
 
 /**
  * General API rate limiter

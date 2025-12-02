@@ -915,7 +915,7 @@ curl -X GET "http://localhost:3001/api/matches?page=2&limit=10" \
 
 - 📖 See [API-SPECIFICATION.md](./API-SPECIFICATION.md) for detailed API documentation
 - 🐛 Report API issues on [GitHub](https://github.com/Miracle-003/skillswapneu-graduation-project/issues)
-- 💬 Join our [Discord](https://discord.gg/skillswap) for API support
+- 💬 Ask questions in [GitHub Discussions](https://github.com/Miracle-003/skillswapneu-graduation-project/discussions)
 
 ---
 

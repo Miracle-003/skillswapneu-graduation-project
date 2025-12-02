@@ -5,7 +5,7 @@
  */
 
 import { describe, test, expect, jest, beforeEach } from '@jest/globals';
-import { getAuthMe } from '../src/controllers/auth.controller.js';
+import { getAuthMe } from '../src/controllers/auth.controller.ts';
 import { createMockRequest, createMockResponse } from './utils.js';
 
 // Mock the Supabase admin module

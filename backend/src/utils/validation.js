@@ -4,6 +4,9 @@
  * This module provides reusable validation functions for common input types
  * in the SkillSwap application. All functions return validation results
  * with helpful error messages.
+ * 
+ * Note: Uses validator.js library. The default import works because
+ * package.json has "type": "module" for ES module support.
  */
 
 import validator from 'validator';
