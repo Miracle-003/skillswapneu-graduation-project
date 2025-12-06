@@ -1,6 +1,4 @@
 /** @type {import('next').NextConfig} */
-import path from 'path'
-
 const nextConfig = {
   eslint: {
     ignoreDuringBuilds: true,
@@ -21,8 +19,6 @@ const nextConfig = {
       },
     ]
   },
-  // Ensure Next.js traces files relative to the monorepo root to avoid workspace root inference issues
-  outputFileTracingRoot: path.resolve(process.cwd(), '..'),
 }
 
 export default nextConfig

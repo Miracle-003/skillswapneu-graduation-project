@@ -1,7 +1,7 @@
 # SkillSwap Project Structure
 
 ## Overview
-This is a monorepo containing both frontend (Next.js) and backend (Node.js + Express + Prisma).
+This is a monorepo containing both frontend (Next.js 14) and backend (Node.js + Express + Prisma).
 
 ## Root Structure
 \`\`\`
@@ -9,11 +9,10 @@ skillswap/
 ├── frontend/              # Next.js frontend application
 ├── backend/               # Node.js + Express backend
 ├── docs/                  # Project documentation
-├── package.json           # Root package.json (monorepo)
 └── README.md
 \`\`\`
 
-## Frontend Structure (Next.js)
+## Frontend Structure (Next.js 14)
 \`\`\`
 frontend/
 ├── app/                   # Next.js App Router
@@ -24,44 +23,61 @@ frontend/
 │   │   └── reset-password/
 │   ├── dashboard/        # Protected dashboard pages
 │   │   ├── profile/      # User profile
-│   │   ├── matches/      # Study partner matches
+│   │   ├── matches/      # Bumble-style matching
 │   │   ├── chat/         # Real-time messaging
 │   │   ├── reviews/      # Peer reviews
 │   │   ├── achievements/ # Gamification
+│   │   ├── notifications/# Notifications
+│   │   ├── study-locations/ # Map with Leaflet
 │   │   └── onboarding/   # New user onboarding
+│   ├── admin/           # Admin dashboard
 │   ├── layout.tsx        # Root layout
 │   ├── page.tsx          # Landing page
-│   └── globals.css       # Global styles
+│   └── globals.css       # Global styles (Tailwind v3)
 ├── components/           # React components
 │   ├── ui/              # shadcn/ui components
-│   └── theme-provider.tsx
+│   └── map-component.tsx # Leaflet map
 ├── lib/                  # Utilities and helpers
 │   ├── api/             # Axios API layer
 │   │   ├── axios-client.ts
-│   │   ├── services/    # API services
+│   │   ├── services/    # API services (auth, profile, match, message)
 │   │   └── hooks/       # React hooks for API
-│   ├── supabase/        # Supabase clients
+│   ├── matching-algorithm.ts
 │   └── utils.ts         # Utility functions
 ├── public/              # Static assets
 ├── package.json
+├── tailwind.config.js   # Tailwind CSS v3 config
+├── postcss.config.js
 └── tsconfig.json
 \`\`\`
 
-## Backend Structure (Node.js + Express)
+## Backend Structure (Node.js + Express + Prisma)
 \`\`\`
 backend/
 ├── src/
-│   ├── index.js          # Entry point
+│   ├── index.js          # Entry point (Express server)
+│   ├── config/
+│   │   └── env.ts        # Environment config
 │   ├── lib/
-│   │   └── prisma.js     # Prisma client singleton
-│   └── routes/           # API routes
-│       ├── auth.js       # Authentication
+│   │   ├── prisma.js     # Prisma client singleton
+│   │   ├── jwt.js        # JWT utilities
+│   │   ├── email.js      # Email sending (SendGrid/MailerSend)
+│   │   └── emailValidation.js
+│   ├── middleware/
+│   │   ├── requireAuth.js   # JWT auth middleware
+│   │   └── requireAdmin.js  # Admin role check
+│   └── routes/
+│       ├── auth.js       # Custom JWT authentication
 │       ├── profiles.js   # User profiles
 │       ├── matches.js    # Matching system
-│       └── messages.js   # Messaging
+│       ├── messages.js   # Messaging
+│       ├── connections.js# User connections
+│       └── admin.js      # Admin routes
 ├── prisma/
 │   └── schema.prisma     # Database schema
-├── .env.example          # Environment variables template
+├── scripts/
+│   └── seed-admin.js     # Admin seeder
+├── .env.example
 ├── package.json
 └── README.md
 \`\`\`
@@ -69,16 +85,15 @@ backend/
 ## Key Files
 
 ### Frontend
-- `frontend/lib/api/axios-client.ts` - Axios configuration with interceptors
-- `frontend/lib/api/services/` - API service modules (auth, profiles, etc.)
-- `frontend/lib/api/hooks/` - React hooks for API calls
-- `frontend/app/layout.tsx` - Root layout with providers
+- `frontend/lib/api/axios-client.ts` - Axios with JWT interceptors
+- `frontend/lib/api/services/auth.service.ts` - Auth API calls
+- `frontend/app/layout.tsx` - Root layout with Inter font
 
 ### Backend
 - `backend/src/index.js` - Express server setup
-- `backend/src/lib/prisma.js` - Prisma client (connects to Supabase PostgreSQL)
-- `backend/prisma/schema.prisma` - Database models
-- `backend/src/routes/` - API endpoints
+- `backend/src/lib/prisma.js` - Prisma client
+- `backend/src/routes/auth.js` - Custom JWT auth (register, login, verify, reset)
+- `backend/prisma/schema.prisma` - All database models
 
 ## Environment Variables
 
@@ -86,31 +101,40 @@ backend/
 \`\`\`env
 NEXT_PUBLIC_API_URL=http://localhost:3001/api
 NEXT_PUBLIC_SITE_URL=https://skillswapneu.vercel.app
-SUPABASE_NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
-SUPABASE_NEXT_PUBLIC_SUPABASE_ANON_KEY=your_anon_key
 \`\`\`
 
 ### Backend (.env)
 \`\`\`env
-DATABASE_URL=postgresql://user:password@host:5432/database
+# Database (Supabase PostgreSQL)
+SUPABASE_POSTGRES_PRISMA_URL=your_pooled_url
+SUPABASE_POSTGRES_URL_NON_POOLING=your_direct_url
+
+# Auth
+JWT_SECRET=your_jwt_secret
+
+# Email (SendGrid)
+SENDGRID_API_KEY=your_sendgrid_key
+EMAIL_FROM=noreply@yourdomain.com
+
+# App
 PORT=3001
-NODE_ENV=development
+APP_URL=http://localhost:3000
 \`\`\`
 
 ## Running the Project
 
 ### Development
 \`\`\`bash
-# Frontend
-cd frontend
-npm install
-npm run dev
-
-# Backend
+# Backend (start first)
 cd backend
 npm install
 npx prisma generate
-npx prisma migrate dev
+npx prisma db push
+npm run dev
+
+# Frontend (in another terminal)
+cd frontend
+npm install
 npm run dev
 \`\`\`
 
@@ -121,17 +145,21 @@ npm run dev
 ## Tech Stack
 
 ### Frontend
-- Next.js 15 (App Router)
-- React 19
+- Next.js 14 (App Router)
+- React 18
 - TypeScript
-- Tailwind CSS
+- Tailwind CSS v3
 - shadcn/ui
 - Axios (API calls)
-- Supabase (Auth)
+- Leaflet.js (Maps)
+- Framer Motion (Animations)
 
 ### Backend
-- Node.js
+- Node.js 18+
 - Express.js
 - Prisma ORM
 - PostgreSQL (Supabase)
+- JWT Authentication (jsonwebtoken)
+- bcrypt/argon2 (Password hashing)
+- SendGrid (Email)
 - JavaScript (ES Modules)

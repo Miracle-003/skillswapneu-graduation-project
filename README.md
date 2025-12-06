@@ -10,7 +10,7 @@ This guide lists exactly what you need to install and the steps to run the proje
 ## 1) Install dependencies
 Run these in both apps. Use the legacy peer deps flag as requested.
 
-```bash
+\`\`\`bash
 # Backend
 cd backend
 npm install --legacy-peer-deps
@@ -18,13 +18,13 @@ npm install --legacy-peer-deps
 # Frontend
 cd ../frontend
 npm install --legacy-peer-deps
-```
+\`\`\`
 
 ## 2) Configure environment variables
 Create the following files with your own values.
 
 ### Frontend: `frontend/.env.local`
-```env
+\`\`\`env
 # Supabase (Browser)
 NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
@@ -35,10 +35,10 @@ NEXT_PUBLIC_API_URL=http://localhost:3001/api
 # Optional: use Next.js rewrites instead of NEXT_PUBLIC_API_URL
 # If you set this, requests to /api/* will be proxied to the backend
 # BACKEND_URL=http://localhost:3001
-```
+\`\`\`
 
 ### Backend: `backend/.env`
-```env
+\`\`\`env
 # Server
 PORT=3001
 NODE_ENV=development
@@ -51,21 +51,21 @@ SUPABASE_ANON_KEY=your_supabase_anon_key
 # From Supabase: Project Settings → Database → Connection Strings (Prisma + Non-pooling)
 SUPABASE_POSTGRES_PRISMA_URL=postgresql://...  
 SUPABASE_POSTGRES_URL_NON_POOLING=postgresql://...
-```
+\`\`\`
 
 ## 3) Prepare the database (Prisma)
-```bash
+\`\`\`bash
 cd backend
 npx prisma generate
 npx prisma migrate dev
-```
+\`\`\`
 
 If your project mirrors `auth.users` into `public.user_accounts`, run the provided SQL in Supabase SQL Editor (see `backend/db/001_user_accounts.sql` if present).
 
 ## 4) Run the apps
 Open two terminals.
 
-```bash
+\`\`\`bash
 # Terminal 1 — Backend
 cd backend
 npm run dev
@@ -75,7 +75,7 @@ npm run dev
 cd frontend
 npm run dev
 # App runs on http://localhost:3000
-```
+\`\`\`
 
 Health check: `GET http://localhost:3001/health`
 

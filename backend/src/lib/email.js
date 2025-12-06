@@ -1,53 +1,19 @@
-
-// SendGrid HTTP API integration
-async function sendViaSendGrid({ to, subject, text, html }) {
-  const apiKey = process.env.SENDGRID_API_KEY
-  const from = process.env.EMAIL_FROM || "no-reply@example.com"
-  if (!apiKey) return { used: false }
-  const controller = new AbortController()
-  const timeoutMs = Number(process.env.EMAIL_SEND_TIMEOUT_MS || 10000)
-  const t = setTimeout(() => controller.abort(), timeoutMs)
-  try {
-    const res = await fetch("https://api.sendgrid.com/v3/mail/send", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        personalizations: [ { to: [ { email: to } ] } ],
-        from: { email: from },
-        subject,
-        content: [
-          { type: "text/plain", value: text },
-          { type: "text/html", value: html },
-        ],
-      }),
-      signal: controller.signal,
-    })
-    clearTimeout(t)
-    if (!res.ok) {
-      const body = await res.text().catch(() => "")
-      console.warn("[email] SendGrid API send failed", res.status, body)
-      return { used: true, queued: false }
-    }
-    return { used: true, queued: true }
-  } catch (e) {
-    console.warn("[email] SendGrid API error:", e?.message || e)
-    return { used: true, queued: false }
-  }
-}
-
-// Optional MailerSend HTTP API integration
+// MailerSend HTTP API integration
 async function sendViaMailerSend({ to, subject, text, html }) {
   const apiKey = process.env.MAILERSEND_API_KEY
-  const from = process.env.EMAIL_FROM || process.env.MAILERSEND_FROM || "no-reply@example.com"
-  if (!apiKey) return { used: false }
+  const from = process.env.MAILERSEND_FROM || "noreply@mirr-codes.dev"
+
+  if (!apiKey) {
+    console.error("[email] MAILERSEND_API_KEY not configured!")
+    return { used: false }
+  }
 
   const controller = new AbortController()
   const timeoutMs = Number(process.env.EMAIL_SEND_TIMEOUT_MS || 10000)
   const t = setTimeout(() => controller.abort(), timeoutMs)
+
   try {
+    console.log("[email] Sending via MailerSend to:", to, "from:", from)
     const res = await fetch("https://api.mailersend.com/v1/email", {
       method: "POST",
       headers: {
@@ -56,7 +22,7 @@ async function sendViaMailerSend({ to, subject, text, html }) {
         Accept: "application/json",
       },
       body: JSON.stringify({
-        from: { email: from },
+        from: { email: from, name: "SkillSwap" },
         to: [{ email: to }],
         subject,
         text,
@@ -65,44 +31,84 @@ async function sendViaMailerSend({ to, subject, text, html }) {
       signal: controller.signal,
     })
     clearTimeout(t)
+
     if (!res.ok) {
       const body = await res.text().catch(() => "")
-      console.warn("[email] MailerSend API send failed", res.status, body)
-      return { used: true, queued: false }
+      console.error("[email] MailerSend failed:", res.status, body)
+      return { used: true, queued: false, error: body }
     }
+
+    console.log("[email] MailerSend success!")
     return { used: true, queued: true }
   } catch (e) {
-    console.warn("[email] MailerSend API error:", e?.message || e)
-    return { used: true, queued: false }
+    clearTimeout(t)
+    console.error("[email] MailerSend error:", e?.message || e)
+    return { used: true, queued: false, error: e?.message }
   }
 }
-
 
 export async function sendVerificationEmail({ to, link }) {
   const subject = "Verify your SkillSwap email"
   const ttlSec = Number(process.env.EMAIL_VERIFICATION_TTL_SECONDS || 120)
   const ttlText = ttlSec >= 60 ? `${Math.round(ttlSec / 60)} minute(s)` : `${ttlSec} seconds`
   const text = `Click the link to verify your email. This link expires in ${ttlText}.\n\n${link}`
-  const html = `<p>Click the link to verify your email. This link expires in <strong>${ttlText}</strong>.</p><p><a href=\"${link}\">Verify Email</a></p>`
+  const html = `
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+      <h2 style="color: #8B1538;">Welcome to SkillSwap!</h2>
+      <p>Click the button below to verify your email address.</p>
+      <p><strong>This link expires in ${ttlText}.</strong></p>
+      <p style="margin: 24px 0;">
+        <a href="${link}" style="background-color: #8B1538; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block;">
+          Verify Email
+        </a>
+      </p>
+      <p style="color: #666; font-size: 14px;">Or copy this link:<br/>${link}</p>
+      <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;" />
+      <p style="color: #999; font-size: 12px;">SkillSwap - Find Your Study Partner</p>
+    </div>
+  `
 
-  // Try SendGrid first, then MailerSend, else log
-  const sg = await sendViaSendGrid({ to, subject, text, html })
-  if (sg.used) return { queued: !!sg.queued }
-  const ms = await sendViaMailerSend({ to, subject, text, html })
-  if (ms.used) return { queued: !!ms.queued }
-  console.warn("[email] No email provider configured. Verification link:", link)
-  return { queued: false, logged: true }
+  console.log("[email] Sending verification email to:", to)
+
+  const result = await sendViaMailerSend({ to, subject, text, html })
+
+  if (result.queued) {
+    return { queued: true }
+  }
+
+  // Log the link if email fails (for development/debugging)
+  console.warn("[email] Failed to send. Verification link:", link)
+  return { queued: false, logged: true, error: result.error }
 }
 
 export async function sendPasswordResetEmail({ to, link }) {
   const subject = "Reset your SkillSwap password"
   const text = `Click the link to reset your password. This link expires in 15 minutes.\n\n${link}`
-  const html = `<p>Click the link below to reset your password. This link expires in <strong>15 minutes</strong>.</p><p><a href=\"${link}\">Reset Password</a></p>`
+  const html = `
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+      <h2 style="color: #8B1538;">Password Reset Request</h2>
+      <p>Click the button below to reset your password.</p>
+      <p><strong>This link expires in 15 minutes.</strong></p>
+      <p style="margin: 24px 0;">
+        <a href="${link}" style="background-color: #8B1538; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block;">
+          Reset Password
+        </a>
+      </p>
+      <p style="color: #666; font-size: 14px;">Or copy this link:<br/>${link}</p>
+      <p style="color: #999; font-size: 12px;">If you didn't request this, you can ignore this email.</p>
+      <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;" />
+      <p style="color: #999; font-size: 12px;">SkillSwap - Find Your Study Partner</p>
+    </div>
+  `
 
-  const sg = await sendViaSendGrid({ to, subject, text, html })
-  if (sg.used) return { queued: !!sg.queued }
-  const ms = await sendViaMailerSend({ to, subject, text, html })
-  if (ms.used) return { queued: !!ms.queued }
-  console.warn("[email] No email provider configured. Password reset link:", link)
-  return { queued: false, logged: true }
+  console.log("[email] Sending password reset email to:", to)
+
+  const result = await sendViaMailerSend({ to, subject, text, html })
+
+  if (result.queued) {
+    return { queued: true }
+  }
+
+  console.warn("[email] Failed to send. Password reset link:", link)
+  return { queued: false, logged: true, error: result.error }
 }

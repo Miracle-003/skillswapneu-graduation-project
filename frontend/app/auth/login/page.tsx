@@ -9,19 +9,24 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { BookOpen } from "lucide-react"
+import { BookOpen, Mail } from "lucide-react"
 import { authService } from "@/lib/api/services/auth.service"
 
 export default function LoginPage() {
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [error, setError] = useState("")
+  const [needsVerification, setNeedsVerification] = useState(false)
+  const [resendLoading, setResendLoading] = useState(false)
+  const [resendSuccess, setResendSuccess] = useState(false)
   const [loading, setLoading] = useState(false)
   const router = useRouter()
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
     setError("")
+    setNeedsVerification(false)
+    setResendSuccess(false)
     setLoading(true)
 
     console.log("[fe] Attempting backend login with email:", email)
@@ -41,9 +46,34 @@ export default function LoginPage() {
       router.refresh()
     } catch (err: any) {
       console.error("[fe] Login failed:", err)
-      setError(err.response?.data?.error || err.message || "Failed to sign in")
+      const errorMsg = err.response?.data?.error || err.message || "Failed to sign in"
+
+      if (errorMsg.toLowerCase().includes("not verified")) {
+        setNeedsVerification(true)
+      }
+      setError(errorMsg)
     } finally {
       setLoading(false)
+    }
+  }
+
+  const handleResendVerification = async () => {
+    setResendLoading(true)
+    setResendSuccess(false)
+    try {
+      // Re-register triggers a new verification email
+      await authService.register({ email, password })
+      setResendSuccess(true)
+    } catch (err: any) {
+      // If user already exists and is verified, that's fine
+      const errorMsg = err.response?.data?.error || ""
+      if (!errorMsg.toLowerCase().includes("already verified")) {
+        setError(err.response?.data?.error || "Failed to resend verification email")
+      } else {
+        setResendSuccess(true)
+      }
+    } finally {
+      setResendLoading(false)
     }
   }
 
@@ -57,7 +87,7 @@ export default function LoginPage() {
             </div>
           </div>
           <CardTitle className="text-2xl font-bold">Welcome Back</CardTitle>
-          <CardDescription>Sign in to your skill swap account</CardDescription>
+          <CardDescription>Sign in to your SkillSwap account</CardDescription>
         </CardHeader>
         <form onSubmit={handleLogin}>
           <CardContent className="space-y-4">
@@ -66,6 +96,30 @@ export default function LoginPage() {
                 <AlertDescription>{error}</AlertDescription>
               </Alert>
             )}
+
+            {needsVerification && (
+              <Alert className="bg-amber-50 text-amber-900 border-amber-200">
+                <Mail className="w-4 h-4" />
+                <AlertDescription className="ml-2">
+                  <p className="mb-2">Your email is not verified yet. Check your inbox for the verification link.</p>
+                  {resendSuccess ? (
+                    <p className="text-green-700 font-medium">Verification email sent! Check your inbox.</p>
+                  ) : (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={handleResendVerification}
+                      disabled={resendLoading}
+                      className="mt-1 bg-transparent"
+                    >
+                      {resendLoading ? "Sending..." : "Resend Verification Email"}
+                    </Button>
+                  )}
+                </AlertDescription>
+              </Alert>
+            )}
+
             <div className="space-y-2">
               <Label htmlFor="email">Email</Label>
               <Input
