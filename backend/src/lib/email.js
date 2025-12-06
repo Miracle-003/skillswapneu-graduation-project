@@ -1,10 +1,16 @@
 // MailerSend HTTP API integration
+const MAILERSEND_FROM = process.env.MAILERSEND_FROM
+
 async function sendViaMailerSend({ to, subject, text, html }) {
   const apiKey = process.env.MAILERSEND_API_KEY
-  const from = process.env.MAILERSEND_FROM || "noreply@mirr-codes.dev"
 
   if (!apiKey) {
     console.error("[email] MAILERSEND_API_KEY not configured!")
+    return { used: false }
+  }
+
+  if (!MAILERSEND_FROM) {
+    console.error("[email] MAILERSEND_FROM not configured!")
     return { used: false }
   }
 
@@ -13,7 +19,7 @@ async function sendViaMailerSend({ to, subject, text, html }) {
   const t = setTimeout(() => controller.abort(), timeoutMs)
 
   try {
-    console.log("[email] Sending via MailerSend to:", to, "from:", from)
+    console.log("[email] Sending via MailerSend to:", to, "from:", MAILERSEND_FROM)
     const res = await fetch("https://api.mailersend.com/v1/email", {
       method: "POST",
       headers: {
@@ -22,7 +28,7 @@ async function sendViaMailerSend({ to, subject, text, html }) {
         Accept: "application/json",
       },
       body: JSON.stringify({
-        from: { email: from, name: "SkillSwap" },
+        from: { email: MAILERSEND_FROM, name: "SkillSwap" },
         to: [{ email: to }],
         subject,
         text,

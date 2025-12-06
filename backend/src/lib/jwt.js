@@ -1,6 +1,11 @@
 import jwt from "jsonwebtoken"
 
-const JWT_SECRET = process.env.JWT_SECRET || "dev-secret-change-me"
+const JWT_SECRET = process.env.JWT_SECRET
+
+if (!JWT_SECRET) {
+  console.error("[jwt] FATAL: JWT_SECRET environment variable is not set!")
+  process.exit(1)
+}
 
 export function signAuthToken(payload, opts = {}) {
   const { expiresIn = "1d" } = opts
