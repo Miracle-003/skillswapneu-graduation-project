@@ -8,7 +8,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
-import { getSupabaseBrowserClient } from "@/lib/supabase/client"
+import { apiClient } from "@/lib/api/axios-client"
 import { ArrowLeft, Star, ExternalLink } from "lucide-react"
 import Link from "next/link"
 
@@ -31,7 +31,6 @@ export default function ReviewSubmissionPage() {
   const [error, setError] = useState("")
   const router = useRouter()
   const params = useParams()
-  const supabase = getSupabaseBrowserClient()
 
   useEffect(() => {
     loadSubmission()
@@ -39,25 +38,12 @@ export default function ReviewSubmissionPage() {
 
   const loadSubmission = async () => {
     try {
-      const { data } = await supabase
-        .from("peer_review_submissions")
-        .select("*, user_profiles!peer_review_submissions_user_id_fkey(full_name)")
-        .eq("id", params.id)
-        .single()
-
+      const { data } = await apiClient.get(`/reviews/submissions/${params.id}`)
       if (data) {
-        setSubmission({
-          id: data.id,
-          title: data.title,
-          description: data.description,
-          course: data.course,
-          file_url: data.file_url,
-          author_name: data.user_profiles.full_name,
-          author_id: data.user_id,
-        })
+        setSubmission(data)
       }
     } catch (err) {
-      console.error("[v0] Error loading submission:", err)
+      console.error("Error loading submission:", err)
     } finally {
       setLoading(false)
     }
@@ -73,23 +59,14 @@ export default function ReviewSubmissionPage() {
     setSubmitting(true)
 
     try {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser()
-      if (!user) throw new Error("Not authenticated")
-
-      const { error: reviewError } = await supabase.from("peer_reviews").insert({
-        submission_id: params.id,
-        reviewer_id: user.id,
+      await apiClient.post(`/reviews/submissions/${params.id}/review`, {
         rating,
         feedback,
       })
 
-      if (reviewError) throw reviewError
-
       router.push("/dashboard/reviews")
     } catch (err: any) {
-      setError(err.message || "Failed to submit review")
+      setError(err.response?.data?.message || "Failed to submit review")
     } finally {
       setSubmitting(false)
     }

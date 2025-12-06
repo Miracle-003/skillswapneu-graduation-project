@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
-import { getSupabaseBrowserClient } from "@/lib/supabase/client"
+import { apiClient } from "@/lib/api/axios-client"
 import { ArrowLeft, FileText, Plus, Star } from "lucide-react"
 import Link from "next/link"
 import { formatDistanceToNow } from "date-fns"
@@ -29,7 +29,6 @@ export default function ReviewsPage() {
   const [mySubmissions, setMySubmissions] = useState<Submission[]>([])
   const [availableReviews, setAvailableReviews] = useState<Submission[]>([])
   const [loading, setLoading] = useState(true)
-  const supabase = getSupabaseBrowserClient()
 
   useEffect(() => {
     loadData()
@@ -37,90 +36,19 @@ export default function ReviewsPage() {
 
   const loadData = async () => {
     try {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser()
-      if (!user) return
-
       // Load user's submissions
-      const { data: submissions } = await supabase
-        .from("peer_review_submissions")
-        .select("*, user_profiles!peer_review_submissions_user_id_fkey(full_name)")
-        .eq("user_id", user.id)
-        .order("created_at", { ascending: false })
-
+      const { data: submissions } = await apiClient.get("/reviews/my-submissions")
       if (submissions) {
-        const formattedSubmissions = await Promise.all(
-          submissions.map(async (sub) => {
-            const { data: reviews } = await supabase.from("peer_reviews").select("rating").eq("submission_id", sub.id)
-
-            const reviewCount = reviews?.length || 0
-            const avgRating = reviewCount > 0 ? reviews!.reduce((sum, r) => sum + r.rating, 0) / reviewCount : 0
-
-            return {
-              id: sub.id,
-              title: sub.title,
-              description: sub.description,
-              course: sub.course,
-              file_url: sub.file_url,
-              status: sub.status,
-              created_at: sub.created_at,
-              author_name: sub.user_profiles.full_name,
-              author_id: sub.user_id,
-              review_count: reviewCount,
-              avg_rating: avgRating,
-            }
-          }),
-        )
-        setMySubmissions(formattedSubmissions)
+        setMySubmissions(submissions)
       }
 
-      // Load available submissions to review (from connections)
-      const { data: connections } = await supabase
-        .from("connections")
-        .select("user_id_2")
-        .eq("user_id_1", user.id)
-        .eq("status", "accepted")
-
-      const connectedIds = connections?.map((c) => c.user_id_2) || []
-
-      if (connectedIds.length > 0) {
-        const { data: availableSubs } = await supabase
-          .from("peer_review_submissions")
-          .select("*, user_profiles!peer_review_submissions_user_id_fkey(full_name)")
-          .in("user_id", connectedIds)
-          .eq("status", "pending")
-          .order("created_at", { ascending: false })
-          .limit(10)
-
-        if (availableSubs) {
-          const formattedAvailable = await Promise.all(
-            availableSubs.map(async (sub) => {
-              const { data: reviews } = await supabase.from("peer_reviews").select("rating").eq("submission_id", sub.id)
-
-              const reviewCount = reviews?.length || 0
-              const avgRating = reviewCount > 0 ? reviews!.reduce((sum, r) => sum + r.rating, 0) / reviewCount : 0
-
-              return {
-                id: sub.id,
-                title: sub.title,
-                description: sub.description,
-                course: sub.course,
-                file_url: sub.file_url,
-                status: sub.status,
-                created_at: sub.created_at,
-                author_name: sub.user_profiles.full_name,
-                author_id: sub.user_id,
-                review_count: reviewCount,
-                avg_rating: avgRating,
-              }
-            }),
-          )
-          setAvailableReviews(formattedAvailable)
-        }
+      // Load available submissions to review
+      const { data: available } = await apiClient.get("/reviews/available")
+      if (available) {
+        setAvailableReviews(available)
       }
     } catch (err) {
-      console.error("[v0] Error loading reviews:", err)
+      console.error("Error loading reviews:", err)
     } finally {
       setLoading(false)
     }

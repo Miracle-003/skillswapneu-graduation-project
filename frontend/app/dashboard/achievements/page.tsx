@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Progress } from "@/components/ui/progress"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { getSupabaseBrowserClient } from "@/lib/supabase/client"
+import { apiClient } from "@/lib/api/axios-client"
 import { ArrowLeft, Trophy, Award, Star, Users, MessageSquare, FileText, Target } from "lucide-react"
 import Link from "next/link"
 
@@ -92,7 +92,6 @@ export default function AchievementsPage() {
   const [badges, setBadges] = useState<BadgeData[]>(BADGES)
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([])
   const [loading, setLoading] = useState(true)
-  const supabase = getSupabaseBrowserClient()
 
   useEffect(() => {
     loadAchievements()
@@ -100,90 +99,53 @@ export default function AchievementsPage() {
 
   const loadAchievements = async () => {
     try {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser()
-      if (!user) return
+      // Fetch stats from backend API
+      const { data: statsData } = await apiClient.get("/achievements/stats")
 
-      // Load user stats
-      const { data: connections } = await supabase.from("connections").select("*").eq("user_id_1", user.id)
+      if (statsData) {
+        const { connections, messages_sent, reviews_given, reviews_received } = statsData
+        const totalPoints = connections * 50 + messages_sent * 2 + reviews_given * 25 + reviews_received * 10
+        const level = Math.floor(totalPoints / 100) + 1
 
-      const { data: messages } = await supabase.from("messages").select("*").eq("sender_id", user.id)
+        setStats({
+          connections,
+          messages_sent,
+          reviews_given,
+          reviews_received,
+          total_points: totalPoints,
+          level,
+        })
 
-      const { data: reviewsGiven } = await supabase.from("peer_reviews").select("*").eq("reviewer_id", user.id)
+        // Update badges based on stats
+        const updatedBadges = BADGES.map((badge) => {
+          let earned = false
+          if (badge.id === "first-connection" && connections >= 1) earned = true
+          if (badge.id === "social-butterfly" && connections >= 5) earned = true
+          if (badge.id === "chatterbox" && messages_sent >= 50) earned = true
+          if (badge.id === "helpful-reviewer" && reviews_given >= 10) earned = true
+          if (badge.id === "feedback-seeker" && reviews_received >= 5) earned = true
+          if (badge.id === "top-contributor" && totalPoints >= 1000) earned = true
+          return { ...badge, earned }
+        })
+        setBadges(updatedBadges)
+      }
 
-      const { data: submissions } = await supabase.from("peer_review_submissions").select("*").eq("user_id", user.id)
-
-      const reviewsReceived = submissions?.length || 0
-
-      const connectionsCount = connections?.length || 0
-      const messagesCount = messages?.length || 0
-      const reviewsGivenCount = reviewsGiven?.length || 0
-
-      // Calculate points
-      const totalPoints = connectionsCount * 50 + messagesCount * 2 + reviewsGivenCount * 25 + reviewsReceived * 10
-
-      const level = Math.floor(totalPoints / 100) + 1
-
-      setStats({
-        connections: connectionsCount,
-        messages_sent: messagesCount,
-        reviews_given: reviewsGivenCount,
-        reviews_received: reviewsReceived,
-        total_points: totalPoints,
-        level,
-      })
-
-      // Update badges
-      const updatedBadges = BADGES.map((badge) => {
-        let earned = false
-        if (badge.id === "first-connection" && connectionsCount >= 1) earned = true
-        if (badge.id === "social-butterfly" && connectionsCount >= 5) earned = true
-        if (badge.id === "chatterbox" && messagesCount >= 50) earned = true
-        if (badge.id === "helpful-reviewer" && reviewsGivenCount >= 10) earned = true
-        if (badge.id === "feedback-seeker" && reviewsReceived >= 5) earned = true
-        if (badge.id === "top-contributor" && totalPoints >= 1000) earned = true
-        return { ...badge, earned }
-      })
-      setBadges(updatedBadges)
-
-      // Load leaderboard
-      const { data: allProfiles } = await supabase.from("user_profiles").select("user_id, full_name").limit(100)
-
-      if (allProfiles) {
-        const leaderboardData = await Promise.all(
-          allProfiles.map(async (profile) => {
-            const { data: userConnections } = await supabase
-              .from("connections")
-              .select("*")
-              .eq("user_id_1", profile.user_id)
-            const { data: userMessages } = await supabase.from("messages").select("*").eq("sender_id", profile.user_id)
-            const { data: userReviews } = await supabase
-              .from("peer_reviews")
-              .select("*")
-              .eq("reviewer_id", profile.user_id)
-
-            const points =
-              (userConnections?.length || 0) * 50 + (userMessages?.length || 0) * 2 + (userReviews?.length || 0) * 25
-
-            return {
-              user_id: profile.user_id,
-              full_name: profile.full_name,
-              total_points: points,
-              rank: 0,
-            }
-          }),
-        )
-
-        const sortedLeaderboard = leaderboardData
-          .sort((a, b) => b.total_points - a.total_points)
-          .map((entry, index) => ({ ...entry, rank: index + 1 }))
-          .slice(0, 10)
-
-        setLeaderboard(sortedLeaderboard)
+      // Fetch leaderboard
+      const { data: leaderboardData } = await apiClient.get("/achievements/leaderboard")
+      if (leaderboardData) {
+        setLeaderboard(leaderboardData)
       }
     } catch (err) {
-      console.error("[v0] Error loading achievements:", err)
+      console.error("Error loading achievements:", err)
+      // Set default values on error
+      setStats({
+        connections: 0,
+        messages_sent: 0,
+        reviews_given: 0,
+        reviews_received: 0,
+        total_points: 0,
+        level: 1,
+      })
     } finally {
       setLoading(false)
     }
@@ -342,31 +304,35 @@ export default function AchievementsPage() {
                   </CardHeader>
                   <CardContent>
                     <div className="space-y-4">
-                      {leaderboard.map((entry) => (
-                        <div key={entry.user_id} className="flex items-center gap-4 p-4 rounded-lg hover:bg-muted">
-                          <div className="text-2xl font-bold text-muted-foreground w-8">{entry.rank}</div>
-                          <Avatar>
-                            <AvatarFallback className="bg-[#8B1538] text-white">
-                              {getInitials(entry.full_name)}
-                            </AvatarFallback>
-                          </Avatar>
-                          <div className="flex-1">
-                            <p className="font-semibold">{entry.full_name}</p>
-                            <p className="text-sm text-muted-foreground">{entry.total_points} points</p>
+                      {leaderboard.length === 0 ? (
+                        <p className="text-center text-muted-foreground py-8">No leaderboard data available</p>
+                      ) : (
+                        leaderboard.map((entry) => (
+                          <div key={entry.user_id} className="flex items-center gap-4 p-4 rounded-lg hover:bg-muted">
+                            <div className="text-2xl font-bold text-muted-foreground w-8">{entry.rank}</div>
+                            <Avatar>
+                              <AvatarFallback className="bg-[#8B1538] text-white">
+                                {getInitials(entry.full_name)}
+                              </AvatarFallback>
+                            </Avatar>
+                            <div className="flex-1">
+                              <p className="font-semibold">{entry.full_name}</p>
+                              <p className="text-sm text-muted-foreground">{entry.total_points} points</p>
+                            </div>
+                            {entry.rank <= 3 && (
+                              <Trophy
+                                className={`w-6 h-6 ${
+                                  entry.rank === 1
+                                    ? "text-yellow-500"
+                                    : entry.rank === 2
+                                      ? "text-gray-400"
+                                      : "text-amber-600"
+                                }`}
+                              />
+                            )}
                           </div>
-                          {entry.rank <= 3 && (
-                            <Trophy
-                              className={`w-6 h-6 ${
-                                entry.rank === 1
-                                  ? "text-yellow-500"
-                                  : entry.rank === 2
-                                    ? "text-gray-400"
-                                    : "text-amber-600"
-                              }`}
-                            />
-                          )}
-                        </div>
-                      ))}
+                        ))
+                      )}
                     </div>
                   </CardContent>
                 </Card>

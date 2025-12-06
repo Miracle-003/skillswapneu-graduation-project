@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Badge } from "@/components/ui/badge"
-import { getSupabaseBrowserClient } from "@/lib/supabase/client"
+import { apiClient } from "@/lib/api/axios-client"
 import { ArrowLeft, Send, Users, Heart, X, ChevronUp, ChevronDown, BookOpen } from "lucide-react"
 import Link from "next/link"
 import { formatDistanceToNow } from "date-fns"
@@ -49,7 +49,6 @@ export default function ChatPage() {
   const [currentUserId, setCurrentUserId] = useState<string>("")
   const [loading, setLoading] = useState(true)
   const messagesEndRef = useRef<HTMLDivElement>(null)
-  const supabase = getSupabaseBrowserClient()
 
   useEffect(() => {
     initializeChat()
@@ -58,7 +57,6 @@ export default function ChatPage() {
   useEffect(() => {
     if (selectedConversation) {
       loadMessages(selectedConversation)
-      subscribeToMessages(selectedConversation)
     }
   }, [selectedConversation])
 
@@ -83,157 +81,48 @@ export default function ChatPage() {
 
   const initializeChat = async () => {
     try {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser()
-      if (!user) return
+      const { data: userData } = await apiClient.get("/auth/me")
+      if (!userData?.user) return
 
-      setCurrentUserId(user.id)
-      await Promise.all([loadConversations(user.id), loadPotentialMatches(user.id)])
+      setCurrentUserId(userData.user.id)
+      await Promise.all([loadConversations(), loadPotentialMatches()])
     } catch (err) {
-      console.error("[v0] Error initializing chat:", err)
+      console.error("Error initializing chat:", err)
     } finally {
       setLoading(false)
     }
   }
 
-  const loadConversations = async (userId: string) => {
+  const loadConversations = async () => {
     try {
-      const { data: connections } = await supabase
-        .from("connections")
-        .select("*, user_profiles!connections_user_id_2_fkey(*)")
-        .eq("user_id_1", userId)
-        .eq("status", "accepted")
-
-      if (!connections) return
-
-      const conversationList: Conversation[] = await Promise.all(
-        connections.map(async (conn) => {
-          const { data: lastMsg } = await supabase
-            .from("messages")
-            .select("*")
-            .or(`sender_id.eq.${userId},receiver_id.eq.${userId}`)
-            .or(`sender_id.eq.${conn.user_id_2},receiver_id.eq.${conn.user_id_2}`)
-            .order("created_at", { ascending: false })
-            .limit(1)
-            .single()
-
-          return {
-            id: conn.user_id_2,
-            participant_name: conn.user_profiles.full_name || "Unknown User",
-            participant_id: conn.user_id_2,
-            last_message: lastMsg?.content || "No messages yet",
-            last_message_time: lastMsg?.created_at || conn.created_at,
-            unread_count: 0,
-          }
-        }),
-      )
-
-      setConversations(conversationList)
+      const { data } = await apiClient.get("/messages/conversations")
+      if (data) {
+        setConversations(data)
+      }
     } catch (err) {
-      console.error("[v0] Error loading conversations:", err)
+      console.error("Error loading conversations:", err)
     }
   }
 
-  const loadPotentialMatches = async (userId: string) => {
+  const loadPotentialMatches = async () => {
     try {
-      const { data: currentProfile } = await supabase.from("user_profiles").select("*").eq("user_id", userId).single()
-
-      if (!currentProfile) return
-
-      const { data: existingConnections } = await supabase
-        .from("connections")
-        .select("user_id_2")
-        .eq("user_id_1", userId)
-
-      const connectedIds = existingConnections?.map((c) => c.user_id_2) || []
-
-      const { data: allProfiles } = await supabase.from("user_profiles").select("*").neq("user_id", userId).limit(20)
-
-      if (!allProfiles) return
-
-      const matches = allProfiles
-        .map((profile) => {
-          const commonCourses = profile.courses.filter((course: string) => currentProfile.courses.includes(course))
-          let score = commonCourses.length * 30
-          score += profile.major === currentProfile.major ? 20 : 0
-
-          return {
-            user_id: profile.user_id,
-            full_name: profile.full_name,
-            major: profile.major,
-            courses: profile.courses,
-            match_score: Math.min(score, 100),
-            common_courses: commonCourses,
-          }
-        })
-        .filter((profile) => profile.match_score > 0 && !connectedIds.includes(profile.user_id))
-        .sort((a, b) => b.match_score - a.match_score)
-        .slice(0, 10)
-
-      setPotentialMatches(matches)
+      const { data } = await apiClient.get("/matches/potential")
+      if (data) {
+        setPotentialMatches(data)
+      }
     } catch (err) {
-      console.error("[v0] Error loading potential matches:", err)
+      console.error("Error loading potential matches:", err)
     }
   }
 
   const loadMessages = async (participantId: string) => {
     try {
-      const { data } = await supabase
-        .from("messages")
-        .select("*, sender:user_profiles!messages_sender_id_fkey(full_name)")
-        .or(`and(sender_id.eq.${currentUserId},receiver_id.eq.${participantId})`)
-        .or(`and(sender_id.eq.${participantId},receiver_id.eq.${currentUserId})`)
-        .order("created_at", { ascending: true })
-
+      const { data } = await apiClient.get(`/messages/${participantId}`)
       if (data) {
-        const formattedMessages = data.map((msg) => ({
-          id: msg.id,
-          sender_id: msg.sender_id,
-          sender_name: msg.sender?.full_name || "Unknown",
-          content: msg.content,
-          created_at: msg.created_at,
-        }))
-        setMessages(formattedMessages)
+        setMessages(data)
       }
     } catch (err) {
-      console.error("[v0] Error loading messages:", err)
-    }
-  }
-
-  const subscribeToMessages = (participantId: string) => {
-    const channel = supabase
-      .channel(`messages:${currentUserId}:${participantId}`)
-      .on(
-        "postgres_changes",
-        {
-          event: "INSERT",
-          schema: "public",
-          table: "messages",
-          filter: `receiver_id=eq.${currentUserId}`,
-        },
-        async (payload) => {
-          const { data: senderProfile } = await supabase
-            .from("user_profiles")
-            .select("full_name")
-            .eq("user_id", payload.new.sender_id)
-            .single()
-
-          const newMsg: Message = {
-            id: payload.new.id,
-            sender_id: payload.new.sender_id,
-            sender_name: senderProfile?.full_name || "Unknown",
-            content: payload.new.content,
-            created_at: payload.new.created_at,
-          }
-
-          setMessages((prev) => [...prev, newMsg])
-        },
-      )
-      .subscribe()
-
-    return () => {
-      supabase.removeChannel(channel)
+      console.error("Error loading messages:", err)
     }
   }
 
@@ -241,54 +130,32 @@ export default function ChatPage() {
     if (!newMessage.trim() || !selectedConversation) return
 
     try {
-      const { data: senderProfile } = await supabase
-        .from("user_profiles")
-        .select("full_name")
-        .eq("user_id", currentUserId)
-        .single()
+      const { data } = await apiClient.post("/messages", {
+        receiver_id: selectedConversation,
+        content: newMessage.trim(),
+      })
 
-      const { data, error } = await supabase
-        .from("messages")
-        .insert({
-          sender_id: currentUserId,
-          receiver_id: selectedConversation,
-          content: newMessage.trim(),
-        })
-        .select()
-        .single()
-
-      if (error) throw error
-
-      const newMsg: Message = {
-        id: data.id,
-        sender_id: currentUserId,
-        sender_name: senderProfile?.full_name || "You",
-        content: data.content,
-        created_at: data.created_at,
+      if (data) {
+        setMessages((prev) => [...prev, data])
+        setNewMessage("")
       }
-
-      setMessages((prev) => [...prev, newMsg])
-      setNewMessage("")
     } catch (err) {
-      console.error("[v0] Error sending message:", err)
+      console.error("Error sending message:", err)
+      toast.error("Failed to send message")
     }
   }
 
   const handleConnectMatch = async (matchUserId: string) => {
     try {
-      const { error } = await supabase.from("connections").insert({
-        user_id_1: currentUserId,
+      await apiClient.post("/connections", {
         user_id_2: matchUserId,
-        status: "accepted",
       })
 
-      if (error) throw error
-
       toast.success("Connected! You can now chat with this person.")
-      await loadConversations(currentUserId)
+      await loadConversations()
       setPotentialMatches((prev) => prev.filter((m) => m.user_id !== matchUserId))
     } catch (err) {
-      console.error("[v0] Error connecting:", err)
+      console.error("Error connecting:", err)
       toast.error("Failed to connect")
     }
   }
@@ -443,7 +310,7 @@ export default function ChatPage() {
                 <Heart className="w-5 h-5 text-[#8B1538]" />
                 Discover ({potentialMatches.length})
               </CardTitle>
-              <p className="text-xs text-muted-foreground">Use ← → arrows to browse</p>
+              <p className="text-xs text-muted-foreground">Use left/right arrows to browse</p>
             </CardHeader>
             <CardContent className="p-4">
               {potentialMatches.length === 0 ? (

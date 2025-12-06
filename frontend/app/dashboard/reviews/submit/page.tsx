@@ -10,7 +10,7 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { getSupabaseBrowserClient } from "@/lib/supabase/client"
+import { apiClient } from "@/lib/api/axios-client"
 import { ArrowLeft, Upload } from "lucide-react"
 import Link from "next/link"
 
@@ -22,7 +22,6 @@ export default function SubmitReviewPage() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
   const router = useRouter()
-  const supabase = getSupabaseBrowserClient()
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -30,25 +29,16 @@ export default function SubmitReviewPage() {
     setLoading(true)
 
     try {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser()
-      if (!user) throw new Error("Not authenticated")
-
-      const { error: submitError } = await supabase.from("peer_review_submissions").insert({
-        user_id: user.id,
+      await apiClient.post("/reviews/submissions", {
         title,
         course,
         description,
         file_url: fileUrl,
-        status: "pending",
       })
-
-      if (submitError) throw submitError
 
       router.push("/dashboard/reviews")
     } catch (err: any) {
-      setError(err.message || "Failed to submit work")
+      setError(err.response?.data?.message || "Failed to submit work")
     } finally {
       setLoading(false)
     }
