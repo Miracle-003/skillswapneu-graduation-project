@@ -6,9 +6,7 @@ datasource db {
   provider  = "postgresql"
   url       = env("SUPABASE_POSTGRES_PRISMA_URL")
   directUrl = env("SUPABASE_POSTGRES_URL_NON_POOLING")
-  schemas   = ["public"]
 }
-
 
 model UserProfile {
   userId          String                 @id @map("user_id") @db.Uuid
@@ -31,7 +29,6 @@ model UserProfile {
   pointsHistory   PointsHistory[]
 
   @@map("user_profiles")
-  @@schema("public")
 }
 
 model Connection {
@@ -47,7 +44,6 @@ model Connection {
   @@index([userId1], map: "idx_connections_user1")
   @@index([userId2], map: "idx_connections_user2")
   @@map("connections")
-  @@schema("public")
 }
 
 model Message {
@@ -63,7 +59,6 @@ model Message {
   @@index([receiverId], map: "idx_messages_receiver")
   @@index([senderId], map: "idx_messages_sender")
   @@map("messages")
-  @@schema("public")
 }
 
 model PeerReviewSubmission {
@@ -82,7 +77,6 @@ model PeerReviewSubmission {
   @@index([status], map: "idx_prs_status")
   @@index([userId], map: "idx_prs_user")
   @@map("peer_review_submissions")
-  @@schema("public")
 }
 
 model PeerReview {
@@ -99,10 +93,8 @@ model PeerReview {
   @@index([reviewerId], map: "idx_pr_reviewer")
   @@index([submissionId], map: "idx_pr_submission")
   @@map("peer_reviews")
-  @@schema("public")
 }
 
-// Additional public models required by the frontend
 model Achievement {
   id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   name        String   @unique
@@ -116,7 +108,6 @@ model Achievement {
   userAchievements UserAchievement[]
 
   @@map("achievements")
-  @@schema("public")
 }
 
 model UserAchievement {
@@ -133,7 +124,6 @@ model UserAchievement {
   @@index([userId], map: "idx_user_achievements_user")
   @@index([achievementId], map: "idx_user_achievements_ach")
   @@map("user_achievements")
-  @@schema("public")
 }
 
 model PointsHistory {
@@ -150,7 +140,6 @@ model PointsHistory {
   @@index([userId], map: "idx_points_user")
   @@index([createdAt], map: "idx_points_created")
   @@map("points_history")
-  @@schema("public")
 }
 
 model Match {
@@ -165,7 +154,6 @@ model Match {
   @@index([userId2])
   @@index([status])
   @@map("matches")
-  @@schema("public")
 }
 
 model UserAccount {
@@ -174,10 +162,8 @@ model UserAccount {
   createdAt DateTime? @map("created_at") @db.Timestamptz(6)
 
   @@map("user_accounts")
-  @@schema("public")
 }
 
-/// Custom local auth user table (separate from Supabase auth.users)
 model AppUser {
   id               String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   email            String    @unique
@@ -190,10 +176,8 @@ model AppUser {
   verificationTokens EmailVerificationToken[]
 
   @@map("app_users")
-  @@schema("public")
 }
 
-/// Stores verification link info and a hashed secret; single-use tokens
 model EmailVerificationToken {
   id          String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   tokenId     String    @unique @map("token_id")
@@ -209,11 +193,9 @@ model EmailVerificationToken {
   @@index([userId])
   @@index([expiresAt])
   @@map("email_verification_tokens")
-  @@schema("public")
 }
 
 enum Role {
-  @@schema("public")
   user
   admin
 }

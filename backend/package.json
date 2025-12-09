@@ -1,21 +1,28 @@
 {
   "name": "skillswap-backend",
   "version": "1.0.0",
+  "private": true,
   "type": "module",
   "engines": {
-    "node": ">=18"
+    "node": "20.x"
   },
   "scripts": {
     "dev": "node --watch src/index.js",
-"start": "sh -c 'prisma migrate deploy || prisma db push --accept-data-loss --skip-generate || true' && node src/index.js",
+
+    "start": "node src/index.js",
+
+    "build": "prisma generate",
+    "render-build": "prisma generate",
+
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
     "prisma:deploy": "prisma migrate deploy",
     "prisma:studio": "prisma studio",
+
     "seed:admin": "node scripts/seed-admin.js"
   },
   "dependencies": {
-    "@prisma/client": "^6.2.0",
+    "@prisma/client": "^5.14.0",
     "@supabase/supabase-js": "^2.47.12",
     "argon2": "^0.31.2",
     "bcrypt": "^5.1.1",
@@ -27,7 +34,7 @@
     "jsonwebtoken": "^9.0.2",
     "morgan": "^1.10.0",
     "nodemailer": "^6.9.15",
-    "prisma": "^6.2.0",
+    "prisma": "^5.14.0",
     "uuid": "^9.0.1",
     "validator": "^13.11.0"
   }
