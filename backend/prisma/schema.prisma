@@ -3,9 +3,7 @@ generator client {
 }
 
 datasource db {
-  provider  = "postgresql"
-  url       = env("SUPABASE_POSTGRES_PRISMA_URL")
-  directUrl = env("SUPABASE_POSTGRES_URL_NON_POOLING")
+  provider = "postgresql"
 }
 
 model UserProfile {
