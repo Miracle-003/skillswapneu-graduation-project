@@ -5,7 +5,7 @@ import bcrypt from "bcrypt"
 import { prisma } from "../lib/prisma.js"
 import { validateEmailAddress } from "../lib/emailValidation.js"
 import { signAuthToken } from "../lib/jwt.js"
-import { requireAuth } from "../lib/authMiddleware.js"
+import { requireAuth } from "../middleware/requireAuth.js"
 import { sendVerificationEmail, sendPasswordResetEmail } from "../lib/email.js"
 
 const router = express.Router()
