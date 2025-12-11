@@ -13,5 +13,8 @@
     "start:backend": "npm run start -w backend",
     "start:frontend": "npm run start -w frontend",
     "vercel-build": "npm install --legacy-peer-deps --prefix frontend && npm run build --prefix frontend"
+  },
+  "dependencies": {
+    "tailwindcss": "^3.4.3"
   }
 }
