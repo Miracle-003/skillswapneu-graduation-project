@@ -13,7 +13,19 @@ if (!connectionString) {
   process.exit(1)
 }
 
-const pool = new Pool({ connectionString })
+// Optional: relax TLS validation for local dev behind intercepting proxies/VPNs
+const isDev = process.env.NODE_ENV !== "production"
+const sslNoVerify = process.env.PG_SSL_NO_VERIFY === "true"
+
+const poolConfig = { connectionString }
+if (sslNoVerify && isDev) {
+  console.warn(
+    "[prisma] PG_SSL_NO_VERIFY=true - TLS certificates will NOT be verified. Use only for local development.",
+  )
+  poolConfig.ssl = { rejectUnauthorized: false }
+}
+
+const pool = new Pool(poolConfig)
 const adapter = new PrismaPg(pool)
 
 export const prisma =
