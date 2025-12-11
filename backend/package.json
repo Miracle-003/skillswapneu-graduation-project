@@ -9,8 +9,8 @@
   "scripts": {
     "dev": "node --watch src/index.js",
     "start": "node src/index.js",
-    "build": "prisma generate",
-    "render-build": "prisma generate",
+    "build": "npm install && prisma generate",
+    "render-build": "npm install && prisma generate",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
     "prisma:deploy": "prisma migrate deploy",
