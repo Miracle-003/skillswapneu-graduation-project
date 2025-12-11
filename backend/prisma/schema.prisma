@@ -1,10 +1,13 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+  url      = env("DIRECT_URL")
+}
+
 generator client {
   provider = "prisma-client-js"
 }
 
-datasource db {
-  provider = "postgresql"
-}
 
 model UserProfile {
   userId          String                 @id @map("user_id") @db.Uuid
