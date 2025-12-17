@@ -1,26 +1,36 @@
 # Render Backend Setup
 
-## Build Command
-Change your Render build command from:
+## Root Directory (important)
+If your Render logs show `bash: line 1: cd: backend: No such file or directory`, your service **Root Directory is already `backend/`**.
+In that case, **do not** use `cd backend` in commands.
+
+## Build Command (recommended)
+If Root Directory is `backend/`:
 \`\`\`
-npm ci --legacy-peer-deps -w backend && npm run prisma:generate -w backend
+npm install && npx prisma generate && npx prisma migrate deploy
 \`\`\`
 
-To:
+If Root Directory is the repo root:
 \`\`\`
-cd backend && npm install && npx prisma generate
+cd backend && npm install && npx prisma generate && npx prisma migrate deploy
 \`\`\`
 
 ## Start Command
+If Root Directory is `backend/`:
+\`\`\`
+npm start
+\`\`\`
+
+If Root Directory is the repo root:
 \`\`\`
 cd backend && npm start
 \`\`\`
 
 ## Environment Variables (Required in Render Dashboard)
-- `SUPABASE_POSTGRES_PRISMA_URL` - Your Supabase PostgreSQL **pooler** connection string (used by Prisma tooling)
-- `SUPABASE_POSTGRES_URL_NON_POOLING` - Your Supabase PostgreSQL **direct** connection string (preferred at runtime)
+- `DATABASE_URL` - Render PostgreSQL connection string
+- `DIRECT_URL` - Direct PostgreSQL connection string used by Prisma migrations (set this equal to `DATABASE_URL` on Render Postgres)
 - `JWT_SECRET` - Secret key for JWT tokens (generate a strong random string)
-- `FRONTEND_URL` - https://skillswapneu.vercel.app
+- `APP_URL` - Frontend base URL (used to build email verification/reset links), e.g. https://skillswapneu.vercel.app
 - `MAILERSEND_API_KEY` - Your MailerSend API key
 - `MAILERSEND_FROM` - noreply@mirr-codes.dev
 - `NODE_ENV` - production

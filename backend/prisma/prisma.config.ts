@@ -1,14 +1,14 @@
 import { defineConfig, env } from 'prisma/config'
 
 type Env = {
-  SUPABASE_POSTGRES_PRISMA_URL: string
-  SUPABASE_POSTGRES_URL_NON_POOLING: string
+  DATABASE_URL: string
+  DIRECT_URL: string
 }
 
 export default defineConfig({
   schema: 'prisma/schema.prisma',
   datasource: {
-    url: env<Env>('SUPABASE_POSTGRES_PRISMA_URL'),
-    directUrl: env<Env>('SUPABASE_POSTGRES_URL_NON_POOLING'),
+    url: env<Env>('DATABASE_URL'),
+    directUrl: env<Env>('DIRECT_URL'),
   },
 })

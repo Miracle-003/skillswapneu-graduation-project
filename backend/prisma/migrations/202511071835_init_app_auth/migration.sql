@@ -1,5 +1,5 @@
 -- Create minimal auth tables managed by Prisma in public schema
--- Note: Supabase auth tables are NOT created here. This only creates our app tables.
+-- Note: external provider auth tables are NOT created here. This only creates our app tables.
 
 create extension if not exists pgcrypto;
 

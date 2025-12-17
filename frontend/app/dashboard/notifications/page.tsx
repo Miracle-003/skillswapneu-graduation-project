@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { useRequireAuth } from "@/lib/api/hooks/useRequireAuth"
+import { apiClient } from "@/lib/api/axios-client"
 import { ArrowLeft, Bell, MessageSquare, Users, Check, X } from "lucide-react"
 import Link from "next/link"
 import { formatDistanceToNow } from "date-fns"
@@ -39,51 +40,59 @@ export default function NotificationsPage() {
 
       const notificationsList: Notification[] = []
 
-      // Load connection requests (match requests)
-      // TODO: replace with backend connections service
-      const connections: any[] = []
-        .select("*, user_profiles!connections_user_id_1_fkey(full_name)")
-        .eq("user_id_2", user.id)
-        .eq("status", "pending")
-        .order("created_at", { ascending: false })
+      // Load backend data
+      const [connectionsRes, recentMessagesRes] = await Promise.all([
+        apiClient.get("/connections/user/" + user.id, { params: { status: "pending" } }),
+        apiClient.get("/messages/recent/" + user.id, { params: { limit: 20 } }),
+      ])
 
-      if (connections) {
-        connections.forEach((conn) => {
-          notificationsList.push({
-            id: `conn_${conn.id}`,
-            type: "match_request",
-            from_user_id: conn.user_id_1,
-            from_user_name: conn.user_profiles?.full_name || "Someone",
-            message: "wants to connect with you",
-            created_at: conn.created_at,
-            read: false,
-            metadata: { connection_id: conn.id },
-          })
+      const connections: any[] = connectionsRes?.data?.connections || []
+      const recentMessages: any[] = Array.isArray(recentMessagesRes?.data) ? recentMessagesRes.data : []
+
+      // Resolve display names from profiles (best-effort)
+      const idsToResolve = new Set<string>()
+      connections.forEach((c) => c?.userId1 && idsToResolve.add(String(c.userId1)))
+      recentMessages.forEach((m) => m?.senderId && idsToResolve.add(String(m.senderId)))
+
+      const idToName = new Map<string, string>()
+      await Promise.all(
+        Array.from(idsToResolve).map(async (id) => {
+          try {
+            const r = await apiClient.get("/profiles/" + id)
+            const fullName = r?.data?.fullName
+            if (typeof fullName === "string" && fullName.trim()) idToName.set(id, fullName)
+          } catch {
+            // ignore missing profiles
+          }
+        }),
+      )
+
+      connections.forEach((conn) => {
+        notificationsList.push({
+          id: `conn_${conn.id}`,
+          type: "match_request",
+          from_user_id: String(conn.userId1),
+          from_user_name: idToName.get(String(conn.userId1)) || "Someone",
+          message: "wants to connect with you",
+          created_at: new Date(conn.createdAt).toISOString(),
+          read: false,
+          metadata: { connection_id: conn.id },
         })
-      }
+      })
 
-      // Load recent messages
-      // TODO: replace with backend recent messages service
-      const recentMessages: any[] = []
-        .select("*, sender:user_profiles!messages_sender_id_fkey(full_name)")
-        .eq("receiver_id", user.id)
-        .order("created_at", { ascending: false })
-        .limit(20)
-
-      if (recentMessages) {
-        recentMessages.forEach((msg) => {
-          notificationsList.push({
-            id: `msg_${msg.id}`,
-            type: "new_message",
-            from_user_id: msg.sender_id,
-            from_user_name: msg.sender?.full_name || "Someone",
-            message: msg.content.substring(0, 50) + (msg.content.length > 50 ? "..." : ""),
-            created_at: msg.created_at,
-            read: false,
-            metadata: { message_id: msg.id },
-          })
+      recentMessages.forEach((msg) => {
+        const content = String(msg.content || "")
+        notificationsList.push({
+          id: `msg_${msg.id}`,
+          type: "new_message",
+          from_user_id: String(msg.senderId),
+          from_user_name: idToName.get(String(msg.senderId)) || "Someone",
+          message: content.substring(0, 50) + (content.length > 50 ? "..." : ""),
+          created_at: new Date(msg.createdAt).toISOString(),
+          read: false,
+          metadata: { message_id: msg.id },
         })
-      }
+      })
 
       // Sort by date
       notificationsList.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
@@ -104,9 +113,7 @@ export default function NotificationsPage() {
 
   const handleAcceptConnection = async (notificationId: string, connectionId: string) => {
     try {
-      const { error } = await supabase.from("connections").update({ status: "accepted" }).eq("id", connectionId)
-
-      if (error) throw error
+      await apiClient.patch("/connections/" + connectionId, { status: "accepted" })
 
       setNotifications((prev) => prev.filter((n) => n.id !== notificationId))
       toast.success("Connection accepted!")
@@ -118,9 +125,7 @@ export default function NotificationsPage() {
 
   const handleRejectConnection = async (notificationId: string, connectionId: string) => {
     try {
-      const { error } = await supabase.from("connections").delete().eq("id", connectionId)
-
-      if (error) throw error
+      await apiClient.delete("/connections/" + connectionId)
 
       setNotifications((prev) => prev.filter((n) => n.id !== notificationId))
       toast.success("Connection rejected")

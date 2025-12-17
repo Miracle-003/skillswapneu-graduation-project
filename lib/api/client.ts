@@ -3,16 +3,14 @@
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000/api"
 
-// Helper function to get auth token from Supabase
-async function getAuthToken() {
-  // You'll implement this based on your Supabase setup
-  // For now, return null - we'll add auth later
-  return null
+// Helper: get JWT from localStorage (frontend stores `auth_token`)
+function getAuthToken() {
+  return typeof window !== "undefined" ? localStorage.getItem("auth_token") : null
 }
 
 // Generic API call function
 async function apiCall<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
-  const token = await getAuthToken()
+  const token = getAuthToken()
 
   const headers: HeadersInit = {
     "Content-Type": "application/json",

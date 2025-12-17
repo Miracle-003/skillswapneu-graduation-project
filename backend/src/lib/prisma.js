@@ -5,16 +5,12 @@ import { PrismaPg } from "@prisma/adapter-pg"
 // Singleton pattern for Prisma Client
 const globalForPrisma = globalThis || global
 
-// For runtime, prefer the non-pooling Postgres URL.
-// Reason: this app already uses a Node `pg` Pool, so using a pooler (PgBouncer)
-// can be redundant and may cause TLS/cert issues depending on the provider.
-const connectionString =
-  process.env.SUPABASE_POSTGRES_URL_NON_POOLING ||
-  process.env.SUPABASE_POSTGRES_PRISMA_URL
+// Portability: use the standard DATABASE_URL.
+const connectionString = process.env.DATABASE_URL
 
 if (!connectionString) {
   console.error(
-    "[prisma] FATAL: Set SUPABASE_POSTGRES_URL_NON_POOLING (preferred) or SUPABASE_POSTGRES_PRISMA_URL.",
+    "[prisma] FATAL: Set DATABASE_URL (preferred).",
   )
   process.exit(1)
 }
