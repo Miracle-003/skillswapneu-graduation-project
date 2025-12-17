@@ -311,11 +311,33 @@ See `DATABASE-SCHEMA.md` for detailed schema.
 
 ## 7. Security Architecture
 
-### 7.1 Authentication & Authorization
-- **JWT Tokens**: Signed with secret key, 24-hour expiration
-- **Password Security**: bcrypt hashing with 10 salt rounds
-- **Session Management**: httpOnly cookies for token storage
-- **Role-Based Access**: Middleware checks user roles
+### 7.1 Security Architecture Overview (Backend-Owned)
+This system is designed so that **the backend is the single source of truth for identity and authorization**. No third-party authentication provider (e.g., Supabase Auth) participates in login, session, or access control decisions.
+
+**Ownership and trust boundaries**
+- **Backend owns authentication**: credentials are validated only by the backend against application-owned tables.
+- **Backend owns authorization**: all access-control decisions are enforced in Express middleware/route handlers.
+- **Database trusts only the backend**: the client never connects directly to the database; RLS/Supabase Auth are not used as security authorities.
+
+**Identity model**
+- **Authoritative user id**: `app_users.id` (UUID).
+- **JWT subject**: the backend issues JWTs where `sub = app_users.id`.
+- **Request context**: protected routes derive identity exclusively from `req.user.id` (decoded JWT).
+
+**Authentication**
+- **Password hashing**: bcrypt/argon2 hashes stored in `app_users.password_hash` (plaintext passwords are never stored).
+- **Email verification & reset**: single-use token records in `email_verification_tokens` (hashed secrets, TTL).
+- **JWT issuance**: on successful login; signed with `JWT_SECRET`; rejected if missing/expired/malformed.
+
+**Authorization rules (enforced server-side)**
+- **Never trust client-supplied user ids**: any `userId`, `senderId`, `userId1` in body/query/params is ignored or rejected if it does not match `req.user.id`.
+- **Profiles**: create/update always targets `req.user.id`.
+- **Messaging**: sender is always `req.user.id`; a user can only read conversations they participate in.
+- **Matches/Connections**: users can only read/update relationships that include `req.user.id`.
+
+**Portability**
+- **Single DB env var**: the backend uses `DATABASE_URL` and works with any PostgreSQL provider (Supabase/Neon/Render/RDS).
+  If Supabase is used, it acts only as **PostgreSQL hosting**, not as an authentication/authorization system.
 
 ### 7.2 Data Protection
 - **Encryption**: HTTPS for all communications
