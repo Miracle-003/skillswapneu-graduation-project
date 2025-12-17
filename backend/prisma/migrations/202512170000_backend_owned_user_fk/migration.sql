@@ -1,5 +1,5 @@
 -- Ensure user identity is owned by the application.
--- This migration removes any dependency on Supabase Auth (auth.users) and
+-- This migration removes any dependency on external auth tables (auth.users) and
 -- makes public.user_profiles.user_id reference public.app_users(id).
 
 DO $$

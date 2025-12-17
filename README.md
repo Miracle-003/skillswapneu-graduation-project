@@ -58,7 +58,7 @@ npx prisma generate
 npx prisma migrate dev
 \`\`\`
 
-If your project mirrors `auth.users` into `public.user_accounts`, run the provided SQL in Supabase SQL Editor (see `backend/db/001_user_accounts.sql` if present).
+If your project includes optional user mirroring into `public.user_accounts`, run the provided SQL (see `backend/db/001_user_accounts.sql` if present).
 
 ## 4) Run the apps
 Open two terminals.

@@ -27,7 +27,7 @@ cd backend && npm start
 \`\`\`
 
 ## Environment Variables (Required in Render Dashboard)
-- `DATABASE_URL` - PostgreSQL connection string (works with Supabase/Neon/Render/RDS)
+- `DATABASE_URL` - Render PostgreSQL connection string
 - `DIRECT_URL` - Direct PostgreSQL connection string used by Prisma migrations (set this equal to `DATABASE_URL` on Render Postgres)
 - `JWT_SECRET` - Secret key for JWT tokens (generate a strong random string)
 - `APP_URL` - Frontend base URL (used to build email verification/reset links), e.g. https://skillswapneu.vercel.app

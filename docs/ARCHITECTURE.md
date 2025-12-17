@@ -240,7 +240,7 @@ See `DATABASE-SCHEMA.md` for detailed schema.
 - **Version Control**: Git + GitHub
 - **CI/CD**: GitHub Actions
 - **Frontend Hosting**: Vercel
-- **Database Hosting**: Neon / Supabase
+- **Database Hosting**: Render PostgreSQL
 - **Monitoring**: Vercel Analytics
 - **Error Tracking**: Sentry (optional)
 
@@ -312,12 +312,12 @@ See `DATABASE-SCHEMA.md` for detailed schema.
 ## 7. Security Architecture
 
 ### 7.1 Security Architecture Overview (Backend-Owned)
-This system is designed so that **the backend is the single source of truth for identity and authorization**. No third-party authentication provider (e.g., Supabase Auth) participates in login, session, or access control decisions.
+This system is designed so that **the backend is the single source of truth for identity and authorization**. No third-party authentication provider participates in login, session, or access control decisions.
 
 **Ownership and trust boundaries**
 - **Backend owns authentication**: credentials are validated only by the backend against application-owned tables.
 - **Backend owns authorization**: all access-control decisions are enforced in Express middleware/route handlers.
-- **Database trusts only the backend**: the client never connects directly to the database; RLS/Supabase Auth are not used as security authorities.
+- **Database trusts only the backend**: the client never connects directly to the database; database-level auth features are not used as security authorities.
 
 **Identity model**
 - **Authoritative user id**: `app_users.id` (UUID).
@@ -336,8 +336,7 @@ This system is designed so that **the backend is the single source of truth for 
 - **Matches/Connections**: users can only read/update relationships that include `req.user.id`.
 
 **Portability**
-- **Single DB env var**: the backend uses `DATABASE_URL` and works with any PostgreSQL provider (Supabase/Neon/Render/RDS).
-  If Supabase is used, it acts only as **PostgreSQL hosting**, not as an authentication/authorization system.
+- **Single DB env var**: the backend uses `DATABASE_URL` and works with any PostgreSQL provider (Render/Neon/RDS/etc.).
 
 ### 7.2 Data Protection
 - **Encryption**: HTTPS for all communications
@@ -412,7 +411,7 @@ This system is designed so that **the backend is the single source of truth for 
                           │ PostgreSQL Connection
                           ▼
 ┌─────────────────────────────────────────────────────────┐
-│              Neon / Supabase PostgreSQL                  │
+│                 Render PostgreSQL                        │
 │  - Primary Database                                      │
 │  - Automated Backups                                     │
 │  - Connection Pooling                                    │
