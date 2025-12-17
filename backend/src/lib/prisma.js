@@ -5,22 +5,28 @@ import { PrismaPg } from "@prisma/adapter-pg"
 // Singleton pattern for Prisma Client
 const globalForPrisma = globalThis || global
 
-// Use the same pooled connection URL that Prisma Migrate uses
-const connectionString = process.env.SUPABASE_POSTGRES_PRISMA_URL
+// For runtime, prefer the non-pooling Postgres URL.
+// Reason: this app already uses a Node `pg` Pool, so using a pooler (PgBouncer)
+// can be redundant and may cause TLS/cert issues depending on the provider.
+const connectionString =
+  process.env.SUPABASE_POSTGRES_URL_NON_POOLING ||
+  process.env.SUPABASE_POSTGRES_PRISMA_URL
 
 if (!connectionString) {
-  console.error("[prisma] FATAL: SUPABASE_POSTGRES_PRISMA_URL environment variable is not set!")
+  console.error(
+    "[prisma] FATAL: Set SUPABASE_POSTGRES_URL_NON_POOLING (preferred) or SUPABASE_POSTGRES_PRISMA_URL.",
+  )
   process.exit(1)
 }
 
-// Optional: relax TLS validation for local dev behind intercepting proxies/VPNs
-const isDev = process.env.NODE_ENV !== "production"
+// Optional: relax TLS validation (last resort).
+// Use only if your DB endpoint presents a self-signed/invalid cert chain.
 const sslNoVerify = process.env.PG_SSL_NO_VERIFY === "true"
 
 const poolConfig = { connectionString }
-if (sslNoVerify && isDev) {
+if (sslNoVerify) {
   console.warn(
-    "[prisma] PG_SSL_NO_VERIFY=true - TLS certificates will NOT be verified. Use only for local development.",
+    "[prisma] PG_SSL_NO_VERIFY=true - TLS certificates will NOT be verified. Use only as a last resort.",
   )
   poolConfig.ssl = { rejectUnauthorized: false }
 }

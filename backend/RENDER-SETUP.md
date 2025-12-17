@@ -17,13 +17,18 @@ cd backend && npm start
 \`\`\`
 
 ## Environment Variables (Required in Render Dashboard)
-- `DATABASE_URL` - Your Supabase PostgreSQL connection string
+- `SUPABASE_POSTGRES_PRISMA_URL` - Your Supabase PostgreSQL **pooler** connection string (used by Prisma tooling)
+- `SUPABASE_POSTGRES_URL_NON_POOLING` - Your Supabase PostgreSQL **direct** connection string (preferred at runtime)
 - `JWT_SECRET` - Secret key for JWT tokens (generate a strong random string)
 - `FRONTEND_URL` - https://skillswapneu.vercel.app
 - `MAILERSEND_API_KEY` - Your MailerSend API key
 - `MAILERSEND_FROM` - noreply@mirr-codes.dev
 - `NODE_ENV` - production
 - `PORT` - 10000 (Render default)
+
+## Optional Environment Variables
+- `PG_SSL_NO_VERIFY` - Set to `true` only if you see `self-signed certificate in certificate chain` errors from Prisma/pg.
+  This disables TLS certificate verification and is not recommended unless you understand the security tradeoff.
 
 ## Important Notes
 1. The build command uses `npm install` instead of `npm ci` because there's no package-lock.json
