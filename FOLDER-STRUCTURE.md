@@ -56,8 +56,6 @@ frontend/
 backend/
 ├── src/
 │   ├── index.js          # Entry point (Express server)
-│   ├── config/
-│   │   └── env.ts        # Environment config
 │   ├── lib/
 │   │   ├── prisma.js     # Prisma client singleton
 │   │   ├── jwt.js        # JWT utilities
@@ -105,9 +103,9 @@ NEXT_PUBLIC_SITE_URL=https://skillswapneu.vercel.app
 
 ### Backend (.env)
 \`\`\`env
-# Database (Supabase PostgreSQL)
-SUPABASE_POSTGRES_PRISMA_URL=your_pooled_url
-SUPABASE_POSTGRES_URL_NON_POOLING=your_direct_url
+# Database (PostgreSQL)
+DATABASE_URL=postgresql://...
+DIRECT_URL=postgresql://...   # set equal to DATABASE_URL in production if desired
 
 # Auth
 JWT_SECRET=your_jwt_secret
@@ -158,7 +156,7 @@ npm run dev
 - Node.js 18+
 - Express.js
 - Prisma ORM
-- PostgreSQL (Supabase)
+- PostgreSQL (Render/Neon/AWS RDS/etc.)
 - JWT Authentication (jsonwebtoken)
 - bcrypt/argon2 (Password hashing)
 - SendGrid (Email)

@@ -5,12 +5,8 @@ import { PrismaPg } from "@prisma/adapter-pg"
 // Singleton pattern for Prisma Client
 const globalForPrisma = globalThis || global
 
-// Portability: prefer the standard DATABASE_URL.
-// (Optional fallbacks exist for legacy Supabase env var names.)
-const connectionString =
-  process.env.DATABASE_URL ||
-  process.env.SUPABASE_POSTGRES_URL_NON_POOLING ||
-  process.env.SUPABASE_POSTGRES_PRISMA_URL
+// Portability: use the standard DATABASE_URL.
+const connectionString = process.env.DATABASE_URL
 
 if (!connectionString) {
   console.error(
