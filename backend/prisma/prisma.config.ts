@@ -1,13 +1,11 @@
-import { defineConfig } from "prisma/config"
+import { defineConfig, env } from "prisma/config"
 
 export default defineConfig({
-  migrate: {
-    datasource: "db",
+  datasource: {
+    url: env("DATABASE_URL"),
   },
-  datasources: {
-    db: {
-      url: process.env.DATABASE_URL,
-      directUrl: process.env.DIRECT_URL,
-    },
+
+  migrations: {
+    path: "prisma/migrations",
   },
 })
