@@ -1,204 +1,106 @@
-datasource db {
-  provider = "postgresql"
-  // NOTE (Prisma v7): do not set `url`/`directUrl` here.
-  // Connection URLs are configured in `prisma/prisma.config.ts`.
-}
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
 
 generator client {
   provider = "prisma-client-js"
 }
 
-
-model UserProfile {
-  userId          String                 @id @map("user_id") @db.Uuid
-  user            AppUser                @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: NoAction)
-  fullName        String                 @map("full_name")
-  major           String?
-  year            String?
-  bio             String?
-  learningStyle   String?                @map("learning_style")
-  studyPreference String?                @map("study_preference")
-  interests       String[]               @default([])
-  createdAt       DateTime               @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt       DateTime               @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
-  connectionsAs1  Connection[]           @relation("connections_user1")
-  connectionsAs2  Connection[]           @relation("connections_user2")
-  messagesRecv    Message[]              @relation("messages_receiver")
-  messagesSent    Message[]              @relation("messages_sender")
-  submissions     PeerReviewSubmission[]
-  reviewsGiven    PeerReview[]           @relation("reviews_reviewer")
-  userAchievements UserAchievement[]
-  pointsHistory   PointsHistory[]
-
-  @@map("user_profiles")
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
 }
 
-model Connection {
-  id        String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  userId1   String      @map("user_id_1") @db.Uuid
-  userId2   String      @map("user_id_2") @db.Uuid
-  status    String      @default("pending")
-  createdAt DateTime    @default(now()) @map("created_at") @db.Timestamptz(6)
-  user1     UserProfile @relation("connections_user1", fields: [userId1], references: [userId], onDelete: Cascade, onUpdate: NoAction)
-  user2     UserProfile @relation("connections_user2", fields: [userId2], references: [userId], onDelete: Cascade, onUpdate: NoAction)
+model User {
+  id               String   @id @default(uuid())
+  email            String   @unique
+  passwordHash     String
+  firstName        String
+  lastName         String
+  profilePictureUrl String?
+  bio              String?
+  location         String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
 
-  @@unique([userId1, userId2])
-  @@index([userId1], map: "idx_connections_user1")
-  @@index([userId2], map: "idx_connections_user2")
-  @@map("connections")
+  skills           Skill[]
+  skillsOffered    UserSkill[] @relation("OfferedSkills")
+  skillsWanted     UserSkill[] @relation("WantedSkills")
+  sentMessages     Message[]   @relation("SentMessages")
+  receivedMessages Message[]   @relation("ReceivedMessages")
+  swapRequestsSent SwapRequest[] @relation("SwapRequestsSent")
+  swapRequestsReceived SwapRequest[] @relation("SwapRequestsReceived")
+  reviews          Review[]    @relation("ReviewsReceived")
+  reviewsGiven     Review[]    @relation("ReviewsGiven")
+}
+
+model Skill {
+  id          String   @id @default(uuid())
+  name        String   @unique
+  category    String
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  users       User[]
+  userSkills  UserSkill[]
+}
+
+model UserSkill {
+  id             String   @id @default(uuid())
+  userId         String
+  skillId        String
+  proficiency    String
+  skillType      String   // "offered" or "wanted"
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  user           User     @relation("OfferedSkills", fields: [userId], references: [id])
+  wantedByUser   User?    @relation("WantedSkills", fields: [userId], references: [id])
+  skill          Skill    @relation(fields: [skillId], references: [id])
+
+  @@unique([userId, skillId, skillType])
+}
+
+model SwapRequest {
+  id                String   @id @default(uuid())
+  requesterId       String
+  receiverId        String
+  offeredSkillId    String
+  requestedSkillId  String
+  status            String   // "pending", "accepted", "rejected", "completed"
+  message           String?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  requester         User     @relation("SwapRequestsSent", fields: [requesterId], references: [id])
+  receiver          User     @relation("SwapRequestsReceived", fields: [receiverId], references: [id])
 }
 
 model Message {
-  id         String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  senderId   String      @map("sender_id") @db.Uuid
-  receiverId String      @map("receiver_id") @db.Uuid
+  id         String   @id @default(uuid())
+  senderId   String
+  receiverId String
   content    String
-  createdAt  DateTime    @default(now()) @map("created_at") @db.Timestamptz(6)
-  receiver   UserProfile @relation("messages_receiver", fields: [receiverId], references: [userId], onDelete: Cascade, onUpdate: NoAction)
-  sender     UserProfile @relation("messages_sender", fields: [senderId], references: [userId], onDelete: Cascade, onUpdate: NoAction)
+  isRead     Boolean  @default(false)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
 
-  @@index([createdAt], map: "idx_messages_created")
-  @@index([receiverId], map: "idx_messages_receiver")
-  @@index([senderId], map: "idx_messages_sender")
-  @@map("messages")
+  sender     User     @relation("SentMessages", fields: [senderId], references: [id])
+  receiver   User     @relation("ReceivedMessages", fields: [receiverId], references: [id])
 }
 
-model PeerReviewSubmission {
-  id          String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  userId      String       @map("user_id") @db.Uuid
-  title       String
-  description String
-  course      String
-  fileUrl     String       @map("file_url")
-  status      String       @default("pending")
-  createdAt   DateTime     @default(now()) @map("created_at") @db.Timestamptz(6)
-  author      UserProfile  @relation(fields: [userId], references: [userId], onDelete: Cascade, onUpdate: NoAction)
-  reviews     PeerReview[]
+model Review {
+  id         String   @id @default(uuid())
+  reviewerId String
+  revieweeId String
+  rating     Int
+  comment    String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
 
-  @@index([createdAt], map: "idx_prs_created")
-  @@index([status], map: "idx_prs_status")
-  @@index([userId], map: "idx_prs_user")
-  @@map("peer_review_submissions")
-}
+  reviewer   User     @relation("ReviewsGiven", fields: [reviewerId], references: [id])
+  reviewee   User     @relation("ReviewsReceived", fields: [revieweeId], references: [id])
 
-model PeerReview {
-  id           String               @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  submissionId String               @map("submission_id") @db.Uuid
-  reviewerId   String               @map("reviewer_id") @db.Uuid
-  rating       Int
-  feedback     String?
-  createdAt    DateTime             @default(now()) @map("created_at") @db.Timestamptz(6)
-  reviewer     UserProfile          @relation("reviews_reviewer", fields: [reviewerId], references: [userId], onDelete: Cascade, onUpdate: NoAction)
-  submission   PeerReviewSubmission @relation(fields: [submissionId], references: [id], onDelete: Cascade, onUpdate: NoAction)
-
-  @@unique([submissionId, reviewerId])
-  @@index([reviewerId], map: "idx_pr_reviewer")
-  @@index([submissionId], map: "idx_pr_submission")
-  @@map("peer_reviews")
-}
-
-model Achievement {
-  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  name        String   @unique
-  description String
-  icon        String?
-  category    String
-  points      Int      @default(0)
-  requirement Json
-  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
-
-  userAchievements UserAchievement[]
-
-  @@map("achievements")
-}
-
-model UserAchievement {
-  id            String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  userId        String      @map("user_id") @db.Uuid
-  achievementId String      @map("achievement_id") @db.Uuid
-  unlockedAt    DateTime    @default(now()) @map("unlocked_at") @db.Timestamptz(6)
-  progress      Json        @default("{}")
-
-  user          UserProfile  @relation(fields: [userId], references: [userId], onDelete: Cascade, onUpdate: NoAction)
-  achievement   Achievement   @relation(fields: [achievementId], references: [id], onDelete: Cascade, onUpdate: NoAction)
-
-  @@unique([userId, achievementId])
-  @@index([userId], map: "idx_user_achievements_user")
-  @@index([achievementId], map: "idx_user_achievements_ach")
-  @@map("user_achievements")
-}
-
-model PointsHistory {
-  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  userId        String   @map("user_id") @db.Uuid
-  points        Int
-  reason        String
-  referenceType String?  @map("reference_type")
-  referenceId   String?  @map("reference_id")
-  createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
-
-  user          UserProfile @relation(fields: [userId], references: [userId], onDelete: Cascade, onUpdate: NoAction)
-
-  @@index([userId], map: "idx_points_user")
-  @@index([createdAt], map: "idx_points_created")
-  @@map("points_history")
-}
-
-model Match {
-  id                 String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  userId1            String   @map("user_id_1") @db.Uuid
-  userId2            String   @map("user_id_2") @db.Uuid
-  compatibilityScore Float    @map("compatibility_score")
-  status             String   @default("pending")
-  createdAt          DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
-
-  @@index([userId1])
-  @@index([userId2])
-  @@index([status])
-  @@map("matches")
-}
-
-model UserAccount {
-  id        String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  email     String?
-  createdAt DateTime? @map("created_at") @db.Timestamptz(6)
-
-  @@map("user_accounts")
-}
-
-model AppUser {
-  id               String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  email            String    @unique
-  passwordHash     String    @map("password_hash")
-  avatarUrl        String?   @map("avatar_url")
-  emailVerifiedAt  DateTime? @map("email_verified_at") @db.Timestamptz(6)
-  role             Role      @default(user)
-  createdAt        DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt        DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
-  verificationTokens EmailVerificationToken[]
-  profile          UserProfile?
-
-  @@map("app_users")
-}
-
-model EmailVerificationToken {
-  id          String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  tokenId     String    @unique @map("token_id")
-  secretHash  String    @map("secret_hash")
-  userId      String    @map("user_id") @db.Uuid
-  email       String
-  linkUrl     String    @map("link_url")
-  expiresAt   DateTime  @map("expires_at") @db.Timestamptz(6)
-  consumedAt  DateTime? @map("consumed_at") @db.Timestamptz(6)
-  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
-  user        AppUser   @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: NoAction)
-
-  @@index([userId])
-  @@index([expiresAt])
-  @@map("email_verification_tokens")
-}
-
-enum Role {
-  user
-  admin
+  @@unique([reviewerId, revieweeId])
 }
