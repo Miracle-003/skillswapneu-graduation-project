@@ -41,6 +41,7 @@ cd backend && npm start
   This disables TLS certificate verification and is not recommended unless you understand the security tradeoff.
 
 ## Important Notes
-1. The build command uses `npm install` instead of `npm ci` because there's no package-lock.json
+1. The build command uses `npm install` (not `npm ci`) for compatibility when deploying the `backend/` workspace as a subdirectory.
 2. Make sure to run `npx prisma generate` after install to generate the Prisma client
 3. The backend runs on port 10000 by default on Render
+4. Prisma v7 uses `backend/prisma.config.ts` (repo root for the backend) for the migration datasource URL; ensure `DATABASE_URL` is set before the first deploy.
