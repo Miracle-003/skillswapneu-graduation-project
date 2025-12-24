@@ -10,7 +10,7 @@
     "build:frontend": "npm run build -w frontend",
     "dev:backend": "npm run dev -w backend",
     "dev:frontend": "npm run dev -w frontend",
-    "start": "npm run start -w backend",
+    "start": "npm run start:backend",
     "start:backend": "npm run start -w backend",
     "start:frontend": "npm run start -w frontend",
     "vercel-build": "npm install --legacy-peer-deps --prefix frontend && npm run build --prefix frontend"
