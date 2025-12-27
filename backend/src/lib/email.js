@@ -83,7 +83,7 @@ export async function sendVerificationEmail({ to, link }) {
             <strong>This link expires in ${ttlText}.</strong>
           </p>
           <div style="margin: 32px 0; text-align: center;">
-            <a href="${link}" style="background-color: #8B1538; color: white; padding: 14px 32px; text-decoration: none; border-radius: 6px; display: inline-block; font-weight: bold; font-size: 16px;">
+            <a href="${link}" role="button" style="background-color: #8B1538; color: white; padding: 14px 32px; text-decoration: none; border-radius: 6px; display: inline-block; font-weight: bold; font-size: 16px;">
               Verify Email Address
             </a>
           </div>
@@ -136,7 +136,7 @@ export async function sendPasswordResetEmail({ to, link }) {
             <strong>This link expires in 15 minutes.</strong>
           </p>
           <div style="margin: 32px 0; text-align: center;">
-            <a href="${link}" style="background-color: #8B1538; color: white; padding: 14px 32px; text-decoration: none; border-radius: 6px; display: inline-block; font-weight: bold; font-size: 16px;">
+            <a href="${link}" role="button" style="background-color: #8B1538; color: white; padding: 14px 32px; text-decoration: none; border-radius: 6px; display: inline-block; font-weight: bold; font-size: 16px;">
               Reset Password
             </a>
           </div>
