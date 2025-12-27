@@ -19,10 +19,12 @@ function getTransporter() {
     return null
   }
 
+  const port = Number(process.env.SMTP_PORT) || 587
+  
   transporter = nodemailer.createTransport({
     host: process.env.SMTP_HOST || "smtp.gmail.com",
-    port: parseInt(process.env.SMTP_PORT || "587"),
-    secure: false,
+    port: port,
+    secure: false, // Use STARTTLS for port 587 (secure: false upgrades with STARTTLS)
     auth: {
       user: smtpUser,
       pass: smtpPassword,
