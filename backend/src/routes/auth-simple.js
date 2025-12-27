@@ -101,7 +101,7 @@ const developmentOnlyMiddleware = (req, res, next) => {
   }
 
   // IP whitelist - only allow localhost
-  const ip = req.ip || req.connection.remoteAddress
+  const ip = req.ip || req.socket?.remoteAddress || "unknown"
   const isLocalhost = ip === "127.0.0.1" || ip === "::1" || ip === "::ffff:127.0.0.1"
   
   if (!isLocalhost) {
@@ -126,23 +126,34 @@ const developmentOnlyMiddleware = (req, res, next) => {
 const rateLimitMap = new Map()
 const RATE_LIMIT_WINDOW = 60 * 60 * 1000 // 1 hour
 const RATE_LIMIT_MAX = 5
+let cleanupIntervalId = null
 
-// Periodic cleanup to prevent memory leaks
-setInterval(() => {
-  const now = Date.now()
-  for (const [ip, requests] of rateLimitMap.entries()) {
-    const validRequests = requests.filter(time => now - time < RATE_LIMIT_WINDOW)
-    if (validRequests.length === 0) {
-      rateLimitMap.delete(ip)
-    } else {
-      rateLimitMap.set(ip, validRequests)
-    }
+// Lazy initialization of cleanup interval to avoid running when route is disabled
+function ensureCleanupInterval() {
+  if (!cleanupIntervalId) {
+    cleanupIntervalId = setInterval(() => {
+      const now = Date.now()
+      for (const [ip, requests] of rateLimitMap.entries()) {
+        const validRequests = requests.filter(time => now - time < RATE_LIMIT_WINDOW)
+        if (validRequests.length === 0) {
+          rateLimitMap.delete(ip)
+        } else {
+          rateLimitMap.set(ip, validRequests)
+        }
+      }
+    }, RATE_LIMIT_WINDOW) // Clean up every hour
+    
+    // Allow process to exit gracefully by not keeping it alive with this interval
+    cleanupIntervalId.unref()
   }
-}, RATE_LIMIT_WINDOW) // Clean up every hour
+}
 
 const rateLimitMiddleware = (req, res, next) => {
-  const ip = req.ip || req.connection.remoteAddress
+  const ip = req.ip || req.socket?.remoteAddress || "unknown"
   const now = Date.now()
+  
+  // Start cleanup interval on first use
+  ensureCleanupInterval()
   
   if (!rateLimitMap.has(ip)) {
     rateLimitMap.set(ip, [])
