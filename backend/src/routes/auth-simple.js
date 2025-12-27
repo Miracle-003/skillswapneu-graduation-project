@@ -1,72 +1,99 @@
-// DISABLED: This route bypasses email verification and poses a security risk.
-// Email verification is a critical security feature that prevents unauthorized account creation.
-// See backend/docs/DISABLED-ROUTES.md for details on security implications and safe re-enablement.
-// NOTE: File structure is kept intact for reference. Imports and router remain for potential safe re-enablement.
+/**
+ * ⚠️ SECURITY WARNING: THIS FILE IS DISABLED FOR SECURITY REASONS ⚠️
+ *
+ * This route bypasses the secure email verification flow and is DISABLED by default.
+ *
+ * DO NOT ENABLE IN PRODUCTION.
+ */
 
 import express from "express"
-import bcrypt from "bcrypt"
-import jwt from "jsonwebtoken"
-import { prisma } from "../lib/prisma.js"
 
 const router = express.Router()
 
-// POST /api/auth-simple/register
-// DISABLED: Bypasses email verification
-/* router.post("/register", async (req, res) => {
-  try {
-    const { email, password, name } = req.body || {}
-    if (!email || !password) return res.status(400).json({ error: "email and password are required" })
+/**
+ * Extract client IP address safely
+ */
+function getClientIp(req) {
+  const forwarded = req.headers["x-forwarded-for"]
+  if (forwarded) {
+    return forwarded.split(",")[0].trim()
+  }
 
-    const exists = await prisma.appUser.findUnique({ where: { email } })
-    if (exists) return res.status(400).json({ error: "Email already in use" })
+  return (
+    req.headers["x-real-ip"] ||
+    req.ip ||
+    req.socket?.remoteAddress ||
+    "unknown"
+  )
+}
 
-    const hashed = await bcrypt.hash(password, 10)
-    const user = await prisma.appUser.create({
-      data: { email, passwordHash: hashed },
+/**
+ * Development-only protection
+ */
+const developmentOnlyMiddleware = (req, res, next) => {
+  if (process.env.ENABLE_UNSAFE_AUTH_SIMPLE !== "true") {
+    console.error("⚠️ [auth-simple] Route disabled")
+
+    return res.status(403).json({
+      error: "This route is disabled for security reasons",
+      message: "Use /api/auth routes instead",
     })
-
-    // Optionally capture name into profile if provided
-    if (name) {
-      try {
-        await prisma.userProfile.upsert({
-          where: { userId: user.id },
-          update: { fullName: name },
-          create: { userId: user.id, fullName: name },
-        })
-      } catch (e) {
-        // Non-fatal if profile table not present yet
-        console.warn("[auth-simple] profile upsert failed:", e?.message)
-      }
-    }
-
-    const token = jwt.sign({ userId: user.id }, process.env.JWT_SECRET, { expiresIn: "7d" })
-    res.json({ token, user })
-  } catch (err) {
-    console.error(err)
-    res.status(400).json({ error: err.message || "Failed to register" })
   }
-}) */
 
-// POST /api/auth-simple/login
-// DISABLED: Bypasses email verification
-/* router.post("/login", async (req, res) => {
-  try {
-    const { email, password } = req.body || {}
-    if (!email || !password) return res.status(400).json({ error: "email and password are required" })
+  const ip = getClientIp(req)
+  const allowed =
+    ip === "127.0.0.1" ||
+    ip === "::1" ||
+    ip === "::ffff:127.0.0.1" ||
+    ip === "0.0.0.0"
 
-    const user = await prisma.appUser.findUnique({ where: { email } })
-    if (!user) return res.status(400).json({ error: "Invalid credentials" })
-
-    const match = await bcrypt.compare(password, user.passwordHash)
-    if (!match) return res.status(400).json({ error: "Invalid credentials" })
-
-    const token = jwt.sign({ userId: user.id }, process.env.JWT_SECRET, { expiresIn: "7d" })
-    res.json({ token, user })
-  } catch (err) {
-    console.error(err)
-    res.status(400).json({ error: err.message || "Failed to login" })
+  if (!allowed) {
+    return res.status(403).json({
+      error: "This route is only available from localhost",
+    })
   }
-}) */
 
-// Export empty router to maintain file structure
+  console.warn("⚠️ USING UNSAFE AUTH ROUTE (DEV ONLY)")
+  next()
+}
+
+/**
+ * Rate limiting (dev only)
+ */
+const rateLimitMap = new Map()
+const RATE_LIMIT = 5
+const WINDOW = 60 * 60 * 1000
+
+const rateLimitMiddleware = (req, res, next) => {
+  const ip = getClientIp(req)
+  const now = Date.now()
+
+  const requests = rateLimitMap.get(ip) || []
+  const valid = requests.filter(t => now - t < WINDOW)
+
+  if (valid.length >= RATE_LIMIT) {
+    return res.status(429).json({
+      error: "Rate limit exceeded",
+    })
+  }
+
+  valid.push(now)
+  rateLimitMap.set(ip, valid)
+  next()
+}
+
+// Apply protections
+router.use(developmentOnlyMiddleware)
+router.use(rateLimitMiddleware)
+
+/**
+ * 🚫 AUTH ROUTES ARE DISABLED
+ * 
+ * This file exists only to preserve structure and documentation.
+ * Real authentication lives in:
+ * 👉 /src/routes/auth.js
+ */
+
+// Do NOT add routes here.
+
 export default router
