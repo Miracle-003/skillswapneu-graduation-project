@@ -89,6 +89,10 @@ const router = express.Router()
 /**
  * Extract client IP address, handling proxies and reverse proxies
  * Prioritizes X-Forwarded-For header for better proxy support
+ * 
+ * SECURITY NOTE: X-Forwarded-For can be spoofed. This is acceptable for
+ * development-only usage with strict localhost checking. For production,
+ * ensure Express 'trust proxy' is properly configured.
  */
 function getClientIp(req) {
   // Check X-Forwarded-For header (proxy/load balancer)
@@ -122,9 +126,13 @@ const developmentOnlyMiddleware = (req, res, next) => {
     })
   }
 
-  // IP whitelist - only allow localhost
+  // IP whitelist - only allow localhost (including Docker 0.0.0.0)
   const ip = getClientIp(req)
-  const isLocalhost = ip === "127.0.0.1" || ip === "::1" || ip === "::ffff:127.0.0.1"
+  const isLocalhost = 
+    ip === "127.0.0.1" || 
+    ip === "::1" || 
+    ip === "::ffff:127.0.0.1" || 
+    ip === "0.0.0.0"
   
   if (!isLocalhost) {
     console.error(`⚠️  [auth-simple] BLOCKED: Non-localhost IP attempted access: ${ip}`)
