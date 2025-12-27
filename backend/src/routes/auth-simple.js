@@ -87,6 +87,27 @@ import express from "express"
 const router = express.Router()
 
 /**
+ * Extract client IP address, handling proxies and reverse proxies
+ * Prioritizes X-Forwarded-For header for better proxy support
+ */
+function getClientIp(req) {
+  // Check X-Forwarded-For header (proxy/load balancer)
+  const forwarded = req.headers["x-forwarded-for"]
+  if (forwarded) {
+    // X-Forwarded-For can contain multiple IPs, take the first one
+    const ips = forwarded.split(",").map(ip => ip.trim())
+    if (ips[0]) return ips[0]
+  }
+  
+  // Check X-Real-IP header (nginx proxy)
+  const realIp = req.headers["x-real-ip"]
+  if (realIp) return realIp
+  
+  // Fallback to direct connection IP
+  return req.ip || req.socket?.remoteAddress || "unknown"
+}
+
+/**
  * Development-only security middleware
  * Only allows requests from localhost when ENABLE_UNSAFE_AUTH_SIMPLE=true
  */
@@ -101,8 +122,8 @@ const developmentOnlyMiddleware = (req, res, next) => {
   }
 
   // IP whitelist - only allow localhost
-  const ip = req.ip || req.socket?.remoteAddress || "unknown"
-  const isLocalhost = ip === "127.0.0.1" || ip === "::1" || ip === "::ffff:127.0.0.1"
+  const ip = getClientIp(req)
+  const isLocalhost = ip === "127.0.0.1" || ip === "::1" || ip === "::ffff:127.0.0.1" || ip === "localhost"
   
   if (!isLocalhost) {
     console.error(`⚠️  [auth-simple] BLOCKED: Non-localhost IP attempted access: ${ip}`)
@@ -149,7 +170,7 @@ function ensureCleanupInterval() {
 }
 
 const rateLimitMiddleware = (req, res, next) => {
-  const ip = req.ip || req.socket?.remoteAddress || "unknown"
+  const ip = getClientIp(req)
   const now = Date.now()
   
   // Start cleanup interval on first use
