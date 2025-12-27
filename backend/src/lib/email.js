@@ -1,66 +1,50 @@
-// MailerSend HTTP API integration
-const MAILERSEND_FROM = process.env.MAILERSEND_FROM
+import nodemailer from "nodemailer"
 
-async function sendViaMailerSend({ to, subject, text, html }) {
-  const apiKey = process.env.MAILERSEND_API_KEY
+// Gmail SMTP transporter - lazy initialized
+let transporter = null
 
-  if (!apiKey) {
-    console.error("[email] MAILERSEND_API_KEY not configured!")
-    return { used: false }
+/**
+ * Get or create nodemailer transporter for Gmail SMTP
+ */
+function getTransporter() {
+  if (transporter) {
+    return transporter
   }
 
-  if (!MAILERSEND_FROM) {
-    console.error("[email] MAILERSEND_FROM not configured!")
-    return { used: false }
+  const smtpUser = process.env.SMTP_USER
+  const smtpPassword = process.env.SMTP_PASSWORD
+
+  if (!smtpUser || !smtpPassword) {
+    console.error("[email] SMTP_USER or SMTP_PASSWORD not configured!")
+    return null
   }
 
-  const controller = new AbortController()
-  const timeoutMs = Number(process.env.EMAIL_SEND_TIMEOUT_MS || 10000)
-  const t = setTimeout(() => controller.abort(), timeoutMs)
+  transporter = nodemailer.createTransport({
+    host: process.env.SMTP_HOST || "smtp.gmail.com",
+    port: parseInt(process.env.SMTP_PORT || "587"),
+    secure: false,
+    auth: {
+      user: smtpUser,
+      pass: smtpPassword,
+    },
+  })
 
-  try {
-    console.log("[email] Sending via MailerSend to:", to, "from:", MAILERSEND_FROM)
-    const res = await fetch("https://api.mailersend.com/v1/email", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        "Content-Type": "application/json",
-        Accept: "application/json",
-      },
-      body: JSON.stringify({
-        from: { email: MAILERSEND_FROM, name: "SkillSwap" },
-        to: [{ email: to }],
-        subject,
-        text,
-        html,
-      }),
-      signal: controller.signal,
-    })
-    clearTimeout(t)
-
-    if (!res.ok) {
-      const body = await res.text().catch(() => "")
-      console.error("[email] MailerSend failed:", res.status, body)
-      return { used: true, queued: false, error: body }
-    }
-
-    console.log("[email] MailerSend success!")
-    return { used: true, queued: true }
-  } catch (e) {
-    clearTimeout(t)
-    console.error("[email] MailerSend error:", e?.message || e)
-    return { used: true, queued: false, error: e?.message }
-  }
+  console.log("[email] Gmail SMTP transporter initialized")
+  return transporter
 }
 
+/**
+ * Send verification email to user
+ */
 export async function sendVerificationEmail({ to, link }) {
-  const subject = "Verify your SkillSwap email"
   const ttlSec = Number(process.env.EMAIL_VERIFICATION_TTL_SECONDS || 120)
   const ttlText = ttlSec >= 60 ? `${Math.round(ttlSec / 60)} minute(s)` : `${ttlSec} seconds`
+
+  const subject = "Verify your SkillSwap email"
   const text = `Click the link to verify your email. This link expires in ${ttlText}.\n\n${link}`
   const html = `
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
-      <h2 style="color: #8B1538;">Welcome to SkillSwap!</h2>
+      <h2 style="color: #8B1538;">Welcome to SkillSwap NEU!</h2>
       <p>Click the button below to verify your email address.</p>
       <p><strong>This link expires in ${ttlText}.</strong></p>
       <p style="margin: 24px 0;">
@@ -70,23 +54,37 @@ export async function sendVerificationEmail({ to, link }) {
       </p>
       <p style="color: #666; font-size: 14px;">Or copy this link:<br/>${link}</p>
       <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;" />
-      <p style="color: #999; font-size: 12px;">SkillSwap - Find Your Study Partner</p>
+      <p style="color: #999; font-size: 12px;">SkillSwap NEU - Find Your Study Partner</p>
     </div>
   `
 
-  console.log("[email] Sending verification email to:", to)
-
-  const result = await sendViaMailerSend({ to, subject, text, html })
-
-  if (result.queued) {
-    return { queued: true }
+  const transport = getTransporter()
+  if (!transport) {
+    console.warn("[email] Transporter not available. Verification link:", link)
+    return { queued: false, logged: true }
   }
 
-  // Log the link if email fails (for development/debugging)
-  console.warn("[email] Failed to send. Verification link:", link)
-  return { queued: false, logged: true, error: result.error }
+  try {
+    console.log("[email] Sending verification email to:", to)
+    await transport.sendMail({
+      from: `"SkillSwap NEU" <${process.env.SMTP_USER}>`,
+      to,
+      subject,
+      text,
+      html,
+    })
+    console.log("[email] Verification email sent successfully")
+    return { queued: true }
+  } catch (error) {
+    console.error("[email] Failed to send verification email:", error.message)
+    console.warn("[email] Verification link:", link)
+    return { queued: false, logged: true, error: error.message }
+  }
 }
 
+/**
+ * Send password reset email to user
+ */
 export async function sendPasswordResetEmail({ to, link }) {
   const subject = "Reset your SkillSwap password"
   const text = `Click the link to reset your password. This link expires in 15 minutes.\n\n${link}`
@@ -103,18 +101,30 @@ export async function sendPasswordResetEmail({ to, link }) {
       <p style="color: #666; font-size: 14px;">Or copy this link:<br/>${link}</p>
       <p style="color: #999; font-size: 12px;">If you didn't request this, you can ignore this email.</p>
       <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;" />
-      <p style="color: #999; font-size: 12px;">SkillSwap - Find Your Study Partner</p>
+      <p style="color: #999; font-size: 12px;">SkillSwap NEU - Find Your Study Partner</p>
     </div>
   `
 
-  console.log("[email] Sending password reset email to:", to)
-
-  const result = await sendViaMailerSend({ to, subject, text, html })
-
-  if (result.queued) {
-    return { queued: true }
+  const transport = getTransporter()
+  if (!transport) {
+    console.warn("[email] Transporter not available. Password reset link:", link)
+    return { queued: false, logged: true }
   }
 
-  console.warn("[email] Failed to send. Password reset link:", link)
-  return { queued: false, logged: true, error: result.error }
+  try {
+    console.log("[email] Sending password reset email to:", to)
+    await transport.sendMail({
+      from: `"SkillSwap NEU" <${process.env.SMTP_USER}>`,
+      to,
+      subject,
+      text,
+      html,
+    })
+    console.log("[email] Password reset email sent successfully")
+    return { queued: true }
+  } catch (error) {
+    console.error("[email] Failed to send password reset email:", error.message)
+    console.warn("[email] Password reset link:", link)
+    return { queued: false, logged: true, error: error.message }
+  }
 }
