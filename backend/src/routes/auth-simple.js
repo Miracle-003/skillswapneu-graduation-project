@@ -104,6 +104,7 @@ function getClientIp(req) {
   if (realIp) return realIp
   
   // Fallback to direct connection IP
+  // Note: req.ip is populated by Express when 'trust proxy' is enabled
   return req.ip || req.socket?.remoteAddress || "unknown"
 }
 
@@ -123,7 +124,7 @@ const developmentOnlyMiddleware = (req, res, next) => {
 
   // IP whitelist - only allow localhost
   const ip = getClientIp(req)
-  const isLocalhost = ip === "127.0.0.1" || ip === "::1" || ip === "::ffff:127.0.0.1" || ip === "localhost"
+  const isLocalhost = ip === "127.0.0.1" || ip === "::1" || ip === "::ffff:127.0.0.1"
   
   if (!isLocalhost) {
     console.error(`⚠️  [auth-simple] BLOCKED: Non-localhost IP attempted access: ${ip}`)
@@ -147,6 +148,7 @@ const developmentOnlyMiddleware = (req, res, next) => {
 const rateLimitMap = new Map()
 const RATE_LIMIT_WINDOW = 60 * 60 * 1000 // 1 hour
 const RATE_LIMIT_MAX = 5
+const CLEANUP_INTERVAL = 15 * 60 * 1000 // Clean up every 15 minutes
 let cleanupIntervalId = null
 
 // Lazy initialization of cleanup interval to avoid running when route is disabled
@@ -162,7 +164,7 @@ function ensureCleanupInterval() {
           rateLimitMap.set(ip, validRequests)
         }
       }
-    }, RATE_LIMIT_WINDOW) // Clean up every hour
+    }, CLEANUP_INTERVAL)
     
     // Allow process to exit gracefully by not keeping it alive with this interval
     cleanupIntervalId.unref()
