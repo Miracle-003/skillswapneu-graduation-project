@@ -10,6 +10,7 @@ import matchRoutes from "./routes/matches.js"
 import messageRoutes from "./routes/messages.js"
 import adminRoutes from "./routes/admin.js"
 import connectionRoutes from "./routes/connections.js"
+// import authSimpleRoutes from "./routes/auth-simple.js" // DISABLED: Bypasses email verification - see backend/docs/DISABLED-ROUTES.md
 
 dotenv.config()
 
@@ -30,6 +31,7 @@ app.get("/health", (req, res) => {
 
 // Routes
 app.use("/api/auth", authRoutes)
+// app.use("/api/auth-simple", authSimpleRoutes) // DISABLED: Bypasses email verification - see backend/docs/DISABLED-ROUTES.md
 app.use("/api/profiles", profileRoutes)
 app.use("/api/matches", matchRoutes)
 app.use("/api/messages", messageRoutes)

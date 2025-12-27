@@ -1,3 +1,7 @@
+// DISABLED: This route bypasses email verification and poses a security risk.
+// Email verification is a critical security feature that prevents unauthorized account creation.
+// See backend/docs/DISABLED-ROUTES.md for details on security implications and safe re-enablement.
+
 import express from "express"
 import bcrypt from "bcrypt"
 import jwt from "jsonwebtoken"
@@ -6,7 +10,8 @@ import { prisma } from "../lib/prisma.js"
 const router = express.Router()
 
 // POST /api/auth-simple/register
-router.post("/register", async (req, res) => {
+// DISABLED: Bypasses email verification
+/* router.post("/register", async (req, res) => {
   try {
     const { email, password, name } = req.body || {}
     if (!email || !password) return res.status(400).json({ error: "email and password are required" })
@@ -39,10 +44,11 @@ router.post("/register", async (req, res) => {
     console.error(err)
     res.status(400).json({ error: err.message || "Failed to register" })
   }
-})
+}) */
 
 // POST /api/auth-simple/login
-router.post("/login", async (req, res) => {
+// DISABLED: Bypasses email verification
+/* router.post("/login", async (req, res) => {
   try {
     const { email, password } = req.body || {}
     if (!email || !password) return res.status(400).json({ error: "email and password are required" })
@@ -59,6 +65,6 @@ router.post("/login", async (req, res) => {
     console.error(err)
     res.status(400).json({ error: err.message || "Failed to login" })
   }
-})
+}) */
 
 export default router
