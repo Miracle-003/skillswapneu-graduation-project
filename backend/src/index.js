@@ -47,5 +47,9 @@ app.use((err, req, res, next) => {
 })
 
 app.listen(PORT, "0.0.0.0", () => {
-  console.log(`🚀 Server running on 0.0.0.0:${PORT}`)
+  console.log(`🚀 Server running on http://0.0.0.0:${PORT}`)
+  console.log(`📧 Email service: ${process.env.RESEND_API_KEY ? 'Resend configured ✅' : 'Not configured ❌'}`)
+  console.log(`🗄️  Database: ${process.env.DATABASE_URL ? 'Connected ✅' : 'Not configured ❌'}`)
+  console.log(`🔐 JWT: ${process.env.JWT_SECRET ? 'Configured ✅' : 'Not configured ❌'}`)
+  console.log(`🌍 Environment: ${process.env.NODE_ENV || 'development'}`)
 })
