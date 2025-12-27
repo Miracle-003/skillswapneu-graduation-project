@@ -78,6 +78,8 @@
  */
 
 import express from "express"
+// The following imports are commented out because the route handlers are disabled.
+// If you need to enable this route (NOT RECOMMENDED), uncomment these imports:
 // import bcrypt from "bcrypt"
 // import jwt from "jsonwebtoken"
 // import { prisma } from "../lib/prisma.js"
@@ -124,6 +126,19 @@ const developmentOnlyMiddleware = (req, res, next) => {
 const rateLimitMap = new Map()
 const RATE_LIMIT_WINDOW = 60 * 60 * 1000 // 1 hour
 const RATE_LIMIT_MAX = 5
+
+// Periodic cleanup to prevent memory leaks
+setInterval(() => {
+  const now = Date.now()
+  for (const [ip, requests] of rateLimitMap.entries()) {
+    const validRequests = requests.filter(time => now - time < RATE_LIMIT_WINDOW)
+    if (validRequests.length === 0) {
+      rateLimitMap.delete(ip)
+    } else {
+      rateLimitMap.set(ip, validRequests)
+    }
+  }
+}, RATE_LIMIT_WINDOW) // Clean up every hour
 
 const rateLimitMiddleware = (req, res, next) => {
   const ip = req.ip || req.connection.remoteAddress
