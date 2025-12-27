@@ -1,6 +1,7 @@
 // DISABLED: This route bypasses email verification and poses a security risk.
 // Email verification is a critical security feature that prevents unauthorized account creation.
 // See backend/docs/DISABLED-ROUTES.md for details on security implications and safe re-enablement.
+// NOTE: File structure is kept intact for reference. Imports and router remain for potential safe re-enablement.
 
 import express from "express"
 import bcrypt from "bcrypt"
@@ -67,4 +68,5 @@ const router = express.Router()
   }
 }) */
 
+// Export empty router to maintain file structure
 export default router
