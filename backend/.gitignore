@@ -2,3 +2,9 @@
 /dist
 .env
 .env.swp
+.env.local
+.env*.local
+
+# Prisma
+node_modules/.prisma
+prisma/generated
