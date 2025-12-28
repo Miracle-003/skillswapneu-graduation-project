@@ -1,19 +1,31 @@
-"use client"
+"use client";
 
-import { useState, useEffect } from "react"
-import { useRouter } from "next/navigation"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Textarea } from "@/components/ui/textarea"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Badge } from "@/components/ui/badge"
-import { Alert, AlertDescription } from "@/components/ui/alert"
-import { useRequireAuth } from "@/lib/api/hooks/useRequireAuth"
-import { profileService } from "@/lib/api/services/profile.service"
-import { ArrowLeft, Plus, X } from "lucide-react"
-import Link from "next/link"
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { useRequireAuth } from "@/lib/api/hooks/useRequireAuth";
+import { profileService } from "@/lib/api/services/profile.service";
+import { ArrowLeft, Plus, X } from "lucide-react";
+import Link from "next/link";
 
 const MAJORS = [
   "Computer Science",
@@ -26,16 +38,29 @@ const MAJORS = [
   "Psychology",
   "Economics",
   "Other",
-]
+];
 
-const LEARNING_STYLES = ["Visual", "Auditory", "Reading/Writing", "Kinesthetic"]
+const YEARS = ["Freshman", "Sophomore", "Junior", "Senior", "Graduate"];
 
-const STUDY_PREFERENCES = ["Morning", "Afternoon", "Evening", "Night", "Flexible"]
+const LEARNING_STYLES = [
+  "Visual",
+  "Auditory",
+  "Reading/Writing",
+  "Kinesthetic",
+];
+
+const STUDY_PREFERENCES = [
+  "Morning",
+  "Afternoon",
+  "Evening",
+  "Night",
+  "Flexible",
+];
 
 export default function ProfilePage() {
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState("")
-  const [success, setSuccess] = useState(false)
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState(false);
   const [profile, setProfile] = useState({
     full_name: "",
     major: "",
@@ -45,23 +70,23 @@ export default function ProfilePage() {
     study_preference: "",
     courses: [] as string[],
     interests: [] as string[],
-  })
-  const [newCourse, setNewCourse] = useState("")
-  const [newInterest, setNewInterest] = useState("")
-  const [userId, setUserId] = useState<string | null>(null)
+  });
+  const [newCourse, setNewCourse] = useState("");
+  const [newInterest, setNewInterest] = useState("");
+  const [userId, setUserId] = useState<string | null>(null);
 
-  const router = useRouter()
-  const { user } = useRequireAuth()
+  const router = useRouter();
+  const { user } = useRequireAuth();
 
   useEffect(() => {
-    loadProfile()
-  }, [])
+    loadProfile();
+  }, []);
 
   const loadProfile = async () => {
     try {
-      if (!user) return
-      setUserId(user.id)
-      const data = await profileService.getById(user.id)
+      if (!user) return;
+      setUserId(user.id);
+      const data = await profileService.getById(user.id);
       if (data) {
         setProfile({
           full_name: data.fullName || "",
@@ -72,22 +97,22 @@ export default function ProfilePage() {
           study_preference: data.studyPreference || "",
           courses: [],
           interests: data.interests || [],
-        })
+        });
       }
     } catch (err: any) {
-      console.error("[v0] Error loading profile:", err)
+      console.error("[v0] Error loading profile:", err);
     }
-  }
+  };
 
   const handleSave = async () => {
-    setError("")
-    setSuccess(false)
-    setLoading(true)
+    setError("");
+    setSuccess(false);
+    setLoading(true);
 
     try {
       // Prefer previously loaded user id to avoid transient null from getUser()
-      const uid = userId || user?.id
-      if (!uid) throw new Error("Not authenticated")
+      const uid = userId || user?.id;
+      if (!uid) throw new Error("Not authenticated");
 
       await profileService.upsert({
         userId: uid,
@@ -98,38 +123,50 @@ export default function ProfilePage() {
         learningStyle: profile.learning_style,
         studyPreference: profile.study_preference,
         interests: profile.interests,
-      } as any)
+      } as any);
 
-      setSuccess(true)
-      setTimeout(() => router.push("/dashboard"), 1500)
+      setSuccess(true);
+      setTimeout(() => router.push("/dashboard"), 1500);
     } catch (err: any) {
-      setError(err.message || "Failed to save profile")
+      setError(err.message || "Failed to save profile");
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   const addCourse = () => {
     if (newCourse.trim() && !profile.courses.includes(newCourse.trim())) {
-      setProfile({ ...profile, courses: [...profile.courses, newCourse.trim()] })
-      setNewCourse("")
+      setProfile({
+        ...profile,
+        courses: [...profile.courses, newCourse.trim()],
+      });
+      setNewCourse("");
     }
-  }
+  };
 
   const removeCourse = (course: string) => {
-    setProfile({ ...profile, courses: profile.courses.filter((c) => c !== course) })
-  }
+    setProfile({
+      ...profile,
+      courses: profile.courses.filter((c) => c !== course),
+    });
+  };
 
   const addInterest = () => {
     if (newInterest.trim() && !profile.interests.includes(newInterest.trim())) {
-      setProfile({ ...profile, interests: [...profile.interests, newInterest.trim()] })
-      setNewInterest("")
+      setProfile({
+        ...profile,
+        interests: [...profile.interests, newInterest.trim()],
+      });
+      setNewInterest("");
     }
-  }
+  };
 
   const removeInterest = (interest: string) => {
-    setProfile({ ...profile, interests: profile.interests.filter((i) => i !== interest) })
-  }
+    setProfile({
+      ...profile,
+      interests: profile.interests.filter((i) => i !== interest),
+    });
+  };
 
   return (
     <div className="min-h-screen bg-background">
@@ -149,7 +186,9 @@ export default function ProfilePage() {
       <main className="max-w-4xl mx-auto px-4 py-8">
         <div className="mb-8">
           <h1 className="text-3xl font-bold mb-2">Your Profile</h1>
-          <p className="text-muted-foreground">Complete your profile to get better study partner matches</p>
+          <p className="text-muted-foreground">
+            Complete your profile to get better study partner matches
+          </p>
         </div>
 
         {error && (
@@ -160,7 +199,9 @@ export default function ProfilePage() {
 
         {success && (
           <Alert className="mb-6 bg-green-50 text-green-900 border-green-200">
-            <AlertDescription>Profile saved successfully! Redirecting...</AlertDescription>
+            <AlertDescription>
+              Profile saved successfully! Redirecting...
+            </AlertDescription>
           </Alert>
         )}
 
@@ -176,19 +217,26 @@ export default function ProfilePage() {
                 <Input
                   id="full_name"
                   value={profile.full_name}
-                  onChange={(e) => setProfile({ ...profile, full_name: e.target.value })}
+                  onChange={(e) =>
+                    setProfile({ ...profile, full_name: e.target.value })
+                  }
                   placeholder="John Doe"
                 />
               </div>
 
               <div className="grid md:grid-cols-2 gap-4">
-                <div className="space-y-2">
+                <div className="space-y-2 relative z-20">
                   <Label htmlFor="major">Major</Label>
-                  <Select value={profile.major} onValueChange={(value) => setProfile({ ...profile, major: value })}>
+                  <Select
+                    value={profile.major}
+                    onValueChange={(value) =>
+                      setProfile({ ...profile, major: value })
+                    }
+                  >
                     <SelectTrigger>
                       <SelectValue placeholder="Select your major" />
                     </SelectTrigger>
-                    <SelectContent>
+                    <SelectContent className="z-50">
                       {MAJORS.map((major) => (
                         <SelectItem key={major} value={major}>
                           {major}
@@ -198,18 +246,23 @@ export default function ProfilePage() {
                   </Select>
                 </div>
 
-                <div className="space-y-2">
+                <div className="space-y-2 relative z-10">
                   <Label htmlFor="year">Year</Label>
-                  <Select value={profile.year} onValueChange={(value) => setProfile({ ...profile, year: value })}>
+                  <Select
+                    value={profile.year}
+                    onValueChange={(value) =>
+                      setProfile({ ...profile, year: value })
+                    }
+                  >
                     <SelectTrigger>
                       <SelectValue placeholder="Select your year" />
                     </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="Freshman">Freshman</SelectItem>
-                      <SelectItem value="Sophomore">Sophomore</SelectItem>
-                      <SelectItem value="Junior">Junior</SelectItem>
-                      <SelectItem value="Senior">Senior</SelectItem>
-                      <SelectItem value="Graduate">Graduate</SelectItem>
+                    <SelectContent className="z-50">
+                      {YEARS.map((year) => (
+                        <SelectItem key={year} value={year}>
+                          {year}
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 </div>
@@ -220,7 +273,9 @@ export default function ProfilePage() {
                 <Textarea
                   id="bio"
                   value={profile.bio}
-                  onChange={(e) => setProfile({ ...profile, bio: e.target.value })}
+                  onChange={(e) =>
+                    setProfile({ ...profile, bio: e.target.value })
+                  }
                   placeholder="Tell us about your academic goals and interests..."
                   rows={4}
                 />
@@ -231,19 +286,23 @@ export default function ProfilePage() {
           <Card>
             <CardHeader>
               <CardTitle>Learning Preferences</CardTitle>
-              <CardDescription>Help us match you with compatible study partners</CardDescription>
+              <CardDescription>
+                Help us match you with compatible study partners
+              </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="space-y-2">
+              <div className="space-y-2 relative z-10">
                 <Label htmlFor="learning_style">Learning Style</Label>
                 <Select
                   value={profile.learning_style}
-                  onValueChange={(value) => setProfile({ ...profile, learning_style: value })}
+                  onValueChange={(value) =>
+                    setProfile({ ...profile, learning_style: value })
+                  }
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Select your learning style" />
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent className="z-50">
                     {LEARNING_STYLES.map((style) => (
                       <SelectItem key={style} value={style}>
                         {style}
@@ -253,16 +312,18 @@ export default function ProfilePage() {
                 </Select>
               </div>
 
-              <div className="space-y-2">
+              <div className="space-y-2 relative z-[5]">
                 <Label htmlFor="study_preference">Study Time Preference</Label>
                 <Select
                   value={profile.study_preference}
-                  onValueChange={(value) => setProfile({ ...profile, study_preference: value })}
+                  onValueChange={(value) =>
+                    setProfile({ ...profile, study_preference: value })
+                  }
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="When do you prefer to study?" />
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent className="z-50">
                     {STUDY_PREFERENCES.map((pref) => (
                       <SelectItem key={pref} value={pref}>
                         {pref}
@@ -277,17 +338,25 @@ export default function ProfilePage() {
           <Card>
             <CardHeader>
               <CardTitle>Courses</CardTitle>
-              <CardDescription>Add the courses you're currently taking</CardDescription>
+              <CardDescription>
+                Add the courses you're currently taking
+              </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="flex gap-2">
                 <Input
                   value={newCourse}
                   onChange={(e) => setNewCourse(e.target.value)}
-                  placeholder="e.g., CS 101, Calculus II"
-                  onKeyPress={(e) => e.key === "Enter" && (e.preventDefault(), addCourse())}
+                  placeholder="e. g., CS 101, Calculus II"
+                  onKeyPress={(e) =>
+                    e.key === "Enter" && (e.preventDefault(), addCourse())
+                  }
                 />
-                <Button onClick={addCourse} type="button" className="bg-[#8B1538] hover:bg-[#A91D3A]">
+                <Button
+                  onClick={addCourse}
+                  type="button"
+                  className="bg-[#8B1538] hover:bg-[#A91D3A]"
+                >
                   <Plus className="w-4 h-4" />
                 </Button>
               </div>
@@ -295,7 +364,10 @@ export default function ProfilePage() {
                 {profile.courses.map((course) => (
                   <Badge key={course} variant="secondary" className="text-sm">
                     {course}
-                    <button onClick={() => removeCourse(course)} className="ml-2 hover:text-destructive">
+                    <button
+                      onClick={() => removeCourse(course)}
+                      className="ml-2 hover:text-destructive"
+                    >
                       <X className="w-3 h-3" />
                     </button>
                   </Badge>
@@ -307,7 +379,9 @@ export default function ProfilePage() {
           <Card>
             <CardHeader>
               <CardTitle>Interests</CardTitle>
-              <CardDescription>Share your academic and personal interests</CardDescription>
+              <CardDescription>
+                Share your academic and personal interests
+              </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="flex gap-2">
@@ -315,9 +389,15 @@ export default function ProfilePage() {
                   value={newInterest}
                   onChange={(e) => setNewInterest(e.target.value)}
                   placeholder="e.g., Machine Learning, Web Development"
-                  onKeyPress={(e) => e.key === "Enter" && (e.preventDefault(), addInterest())}
+                  onKeyPress={(e) =>
+                    e.key === "Enter" && (e.preventDefault(), addInterest())
+                  }
                 />
-                <Button onClick={addInterest} type="button" className="bg-[#8B1538] hover:bg-[#A91D3A]">
+                <Button
+                  onClick={addInterest}
+                  type="button"
+                  className="bg-[#8B1538] hover:bg-[#A91D3A]"
+                >
                   <Plus className="w-4 h-4" />
                 </Button>
               </div>
@@ -325,7 +405,10 @@ export default function ProfilePage() {
                 {profile.interests.map((interest) => (
                   <Badge key={interest} variant="secondary" className="text-sm">
                     {interest}
-                    <button onClick={() => removeInterest(interest)} className="ml-2 hover:text-destructive">
+                    <button
+                      onClick={() => removeInterest(interest)}
+                      className="ml-2 hover:text-destructive"
+                    >
                       <X className="w-3 h-3" />
                     </button>
                   </Badge>
@@ -335,15 +418,23 @@ export default function ProfilePage() {
           </Card>
 
           <div className="flex gap-4">
-            <Button onClick={handleSave} disabled={loading} className="flex-1 bg-[#8B1538] hover:bg-[#A91D3A]">
+            <Button
+              onClick={handleSave}
+              disabled={loading}
+              className="flex-1 bg-[#8B1538] hover:bg-[#A91D3A]"
+            >
               {loading ? "Saving..." : "Save Profile"}
             </Button>
-            <Button variant="outline" onClick={() => router.push("/dashboard")} disabled={loading}>
+            <Button
+              variant="outline"
+              onClick={() => router.push("/dashboard")}
+              disabled={loading}
+            >
               Cancel
             </Button>
           </div>
         </div>
       </main>
     </div>
-  )
+  );
 }
