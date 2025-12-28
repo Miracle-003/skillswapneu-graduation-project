@@ -83,3 +83,4 @@ Health check: `GET http://localhost:3001/health`
 - Database connection errors: verify `DATABASE_URL`/`DIRECT_URL`.
 - API routing: either set `NEXT_PUBLIC_API_URL` or configure `BACKEND_URL` for Next.js rewrites.
  
+ 
