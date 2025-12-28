@@ -82,3 +82,4 @@ Health check: `GET http://localhost:3001/health`
 - 401 errors in frontend: ensure you have a valid JWT in `localStorage` (`auth_token`) by logging in.
 - Database connection errors: verify `DATABASE_URL`/`DIRECT_URL`.
 - API routing: either set `NEXT_PUBLIC_API_URL` or configure `BACKEND_URL` for Next.js rewrites.
+ 
