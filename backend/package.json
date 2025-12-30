@@ -17,6 +17,9 @@
     "prisma:studio": "npx prisma studio",
     "prisma:reset": "npx prisma migrate reset"
   },
+  "prisma": {
+    "seed": "node prisma/seed.js"
+  },
   "dependencies": {
     "@prisma/client": "^5.22.0",
     "argon2": "^0.31.2",
