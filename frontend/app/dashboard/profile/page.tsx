@@ -1,45 +1,50 @@
-"use client";
+"use client"
 
-import type React from "react";
-import { useState, useEffect } from "react";
+import type React from "react"
+import { useEffect, useState } from "react"
+import Link from "next/link"
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-} from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
+} from "@/components/ui/card"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Textarea } from "@/components/ui/textarea"
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { CheckCircle, Loader2 } from "lucide-react";
+} from "@/components/ui/select"
+import { Alert, AlertDescription } from "@/components/ui/alert"
+import { Loader2, CheckCircle, ArrowLeft, Pencil } from "lucide-react"
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || "/api";
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || "/api"
+
+/* -------------------- API -------------------- */
 
 const profileService = {
   getProfile: async () => {
-    const token =
-      typeof window !== "undefined" ? localStorage.getItem("auth_token") : null;
+    const token = localStorage.getItem("auth_token")
+    if (!token) throw new Error("Not authenticated")
+
     const res = await fetch(`${API_BASE}/profile`, {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    });
-    if (!res.ok) throw new Error("Failed to load profile");
-    return res.json();
+      headers: { Authorization: `Bearer ${token}` },
+    })
+
+    if (!res.ok) throw new Error("Failed to load profile")
+    return res.json()
   },
+
   updateProfile: async (data: any) => {
-    const token =
-      typeof window !== "undefined" ? localStorage.getItem("auth_token") : null;
+    const token = localStorage.getItem("auth_token")
+    if (!token) throw new Error("Not authenticated")
+
     const res = await fetch(`${API_BASE}/profile`, {
       method: "PUT",
       headers: {
@@ -47,102 +52,168 @@ const profileService = {
         Authorization: `Bearer ${token}`,
       },
       body: JSON.stringify(data),
-    });
-    if (!res.ok) throw new Error("Failed to update profile");
-    return res.json();
+    })
+
+    if (!res.ok) throw new Error("Failed to update profile")
+    return res.json()
   },
-};
+}
+
+/* -------------------- PAGE -------------------- */
 
 export default function ProfilePage() {
-  const [fullName, setFullName] = useState("");
-  const [major, setMajor] = useState("");
-  const [year, setYear] = useState("");
-  const [bio, setBio] = useState("");
-  const [learningStyle, setLearningStyle] = useState("");
-  const [studyTimePreference, setStudyTimePreference] = useState("");
-  const [interests, setInterests] = useState("");
-  const [courses, setCourses] = useState("");
+  const [initialLoading, setInitialLoading] = useState(true)
+  const [saving, setSaving] = useState(false)
+  const [editing, setEditing] = useState(false)
 
-  const [loading, setLoading] = useState(false);
-  const [initialLoading, setInitialLoading] = useState(true);
-  const [error, setError] = useState("");
-  const [success, setSuccess] = useState(false);
+  const [error, setError] = useState("")
+  const [success, setSuccess] = useState(false)
+
+  // form state
+  const [fullName, setFullName] = useState("")
+  const [major, setMajor] = useState("")
+  const [year, setYear] = useState("")
+  const [bio, setBio] = useState("")
+  const [learningStyle, setLearningStyle] = useState("")
+  const [studyTimePreference, setStudyTimePreference] = useState("")
+  const [interests, setInterests] = useState("")
+  const [courses, setCourses] = useState("")
+
+  // snapshot for cancel
+  const [originalData, setOriginalData] = useState<any>(null)
+
+  /* -------------------- LOAD -------------------- */
 
   useEffect(() => {
-    const loadProfile = async () => {
-      try {
-        const profile = await profileService.getProfile();
-        setFullName(profile.fullName || "");
-        setMajor(profile.major || "");
-        setYear(profile.year || "");
-        setBio(profile.bio || "");
-        setLearningStyle(profile.learningStyle || "");
-        setStudyTimePreference(profile.studyTimePreference || "");
-        setInterests(profile.interests || "");
-        setCourses(profile.courses || "");
-      } catch (err) {
-        setError("Failed to load profile");
-      } finally {
-        setInitialLoading(false);
-      }
-    };
+    const token = localStorage.getItem("auth_token")
+    if (!token) {
+      setInitialLoading(false)
+      return
+    }
 
-    loadProfile();
-  }, []);
+    const load = async () => {
+      try {
+        const profile = await profileService.getProfile()
+
+        const normalized = {
+          fullName: profile.full_name || "",
+          major: profile.major || "",
+          year: profile.year || "",
+          bio: profile.bio || "",
+          learningStyle: profile.learning_style || "",
+          studyTimePreference: profile.study_preference || "",
+          interests: (profile.interests || []).join(", "),
+          courses: (profile.courses || []).join(", "),
+        }
+
+        setOriginalData(normalized)
+
+        setFullName(normalized.fullName)
+        setMajor(normalized.major)
+        setYear(normalized.year)
+        setBio(normalized.bio)
+        setLearningStyle(normalized.learningStyle)
+        setStudyTimePreference(normalized.studyTimePreference)
+        setInterests(normalized.interests)
+        setCourses(normalized.courses)
+      } catch (err: any) {
+        setError(err.message)
+      } finally {
+        setInitialLoading(false)
+      }
+    }
+
+    load()
+  }, [])
+
+  /* -------------------- SAVE -------------------- */
 
   const handleSave = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError("");
-    setSuccess(false);
-    setLoading(true);
+    e.preventDefault()
+    setSaving(true)
+    setError("")
+    setSuccess(false)
 
-    const profileData = {
-      fullName,
+    const payload = {
+      full_name: fullName,
       major,
       year,
       bio,
-      learningStyle,
-      studyTimePreference,
-      interests,
-      courses,
-    };
+      learning_style: learningStyle,
+      study_preference: studyTimePreference,
+      interests: interests.split(",").map(i => i.trim()).filter(Boolean),
+      courses: courses.split(",").map(c => c.trim()).filter(Boolean),
+    }
 
     try {
-      await profileService.updateProfile(profileData);
-      setSuccess(true);
-      setTimeout(() => {
-        setSuccess(false);
-      }, 3000);
+      await profileService.updateProfile(payload)
+      setSuccess(true)
+      setEditing(false)
+      setOriginalData({ ...payload, interests, courses })
+      setTimeout(() => setSuccess(false), 3000)
     } catch (err: any) {
-      setError(err.message || "Failed to save profile");
+      setError(err.message)
     } finally {
-      setLoading(false);
+      setSaving(false)
     }
-  };
+  }
+
+  const cancelEdit = () => {
+    if (!originalData) return
+    setFullName(originalData.fullName)
+    setMajor(originalData.major)
+    setYear(originalData.year)
+    setBio(originalData.bio)
+    setLearningStyle(originalData.learningStyle)
+    setStudyTimePreference(originalData.studyTimePreference)
+    setInterests(originalData.interests)
+    setCourses(originalData.courses)
+    setEditing(false)
+  }
+
+  /* -------------------- UI -------------------- */
 
   if (initialLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <Loader2 className="w-8 h-8 animate-spin text-[#8B1538]" />
       </div>
-    );
+    )
   }
 
   return (
-    <div className="min-h-screen bg-background p-4 md:p-8">
+    <div className="min-h-screen bg-background p-6">
       <div className="max-w-4xl mx-auto space-y-6">
+        {/* Header */}
+        <div className="flex items-center justify-between">
+          <Link
+            href="/dashboard"
+            className="flex items-center text-sm text-muted-foreground hover:text-foreground"
+          >
+            <ArrowLeft className="w-4 h-4 mr-2" />
+            Back to Dashboard
+          </Link>
+
+          {!editing && (
+            <Button onClick={() => setEditing(true)} variant="outline">
+              <Pencil className="w-4 h-4 mr-2" />
+              Edit Profile
+            </Button>
+          )}
+        </div>
+
         <div>
-          <h1 className="text-3xl font-bold">Profile Settings</h1>
-          <p className="text-muted-foreground mt-1">
-            Manage your account information and preferences
+          <h1 className="text-3xl font-bold">Your Profile</h1>
+          <p className="text-muted-foreground">
+            View and manage your academic profile
           </p>
         </div>
 
         {success && (
-          <Alert className="bg-green-50 text-green-900 border-green-200">
+          <Alert className="bg-green-50 border-green-200 text-green-900">
             <CheckCircle className="w-4 h-4" />
             <AlertDescription className="ml-2">
-              Profile updated successfully!
+              Profile updated successfully
             </AlertDescription>
           </Alert>
         )}
@@ -156,191 +227,68 @@ export default function ProfilePage() {
         <form onSubmit={handleSave}>
           <Card>
             <CardHeader>
-              <CardTitle>Personal Information</CardTitle>
-              <CardDescription>Update your personal details</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="space-y-2">
-                <Label htmlFor="fullName">Full Name</Label>
-                <Input
-                  id="fullName"
-                  value={fullName}
-                  onChange={(e) => setFullName(e.target.value)}
-                  placeholder="Enter your full name"
-                  disabled={loading}
-                />
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="space-y-2">
-                  <Label htmlFor="major">Major</Label>
-                  <Select
-                    value={major}
-                    onValueChange={setMajor}
-                    disabled={loading}
-                  >
-                    <SelectTrigger id="major">
-                      <SelectValue placeholder="Select your major" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="computer-science">
-                        Computer Science
-                      </SelectItem>
-                      <SelectItem value="engineering">Engineering</SelectItem>
-                      <SelectItem value="business">Business</SelectItem>
-                      <SelectItem value="mathematics">Mathematics</SelectItem>
-                      <SelectItem value="biology">Biology</SelectItem>
-                      <SelectItem value="psychology">Psychology</SelectItem>
-                      <SelectItem value="economics">Economics</SelectItem>
-                      <SelectItem value="other">Other</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="year">Year</Label>
-                  <Select
-                    value={year}
-                    onValueChange={setYear}
-                    disabled={loading}
-                  >
-                    <SelectTrigger id="year">
-                      <SelectValue placeholder="Select your year" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="freshman">Freshman</SelectItem>
-                      <SelectItem value="sophomore">Sophomore</SelectItem>
-                      <SelectItem value="junior">Junior</SelectItem>
-                      <SelectItem value="senior">Senior</SelectItem>
-                      <SelectItem value="graduate">Graduate</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="bio">Bio</Label>
-                <Textarea
-                  id="bio"
-                  value={bio}
-                  onChange={(e) => setBio(e.target.value)}
-                  placeholder="Tell us about your academic goals and interests..."
-                  rows={4}
-                  disabled={loading}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="courses">Courses</Label>
-                <Input
-                  id="courses"
-                  value={courses}
-                  onChange={(e) => setCourses(e.target.value)}
-                  placeholder="e.g., CS101, MATH201, PHYS150 (comma-separated)"
-                  disabled={loading}
-                />
-                <p className="text-sm text-muted-foreground">
-                  Enter your current courses separated by commas
-                </p>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="interests">Interests</Label>
-                <Input
-                  id="interests"
-                  value={interests}
-                  onChange={(e) => setInterests(e.target.value)}
-                  placeholder="e.g., Machine Learning, Web Development, Data Science (comma-separated)"
-                  disabled={loading}
-                />
-                <p className="text-sm text-muted-foreground">
-                  Enter your academic interests separated by commas
-                </p>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="mt-6">
-            <CardHeader>
-              <CardTitle>Learning Preferences</CardTitle>
+              <CardTitle>Profile Information</CardTitle>
               <CardDescription>
-                Help us match you with compatible study partners
+                {editing ? "Edit your details below" : "Profile overview"}
               </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="space-y-2">
-                <Label htmlFor="learningStyle">Learning Style</Label>
-                <Select
-                  value={learningStyle}
-                  onValueChange={setLearningStyle}
-                  disabled={loading}
-                >
-                  <SelectTrigger id="learningStyle">
-                    <SelectValue placeholder="Select your learning style" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="visual">Visual</SelectItem>
-                    <SelectItem value="auditory">Auditory</SelectItem>
-                    <SelectItem value="reading-writing">
-                      Reading/Writing
-                    </SelectItem>
-                    <SelectItem value="kinesthetic">Kinesthetic</SelectItem>
-                    <SelectItem value="multimodal">Multimodal</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="studyTimePreference">
-                  Study Time Preference
-                </Label>
-                <Select
-                  value={studyTimePreference}
-                  onValueChange={setStudyTimePreference}
-                  disabled={loading}
-                >
-                  <SelectTrigger id="studyTimePreference">
-                    <SelectValue placeholder="When do you prefer to study?" />
+            <CardContent className="space-y-6">
+              <Field label="Full Name">
+                <Input disabled={!editing} value={fullName} onChange={e => setFullName(e.target.value)} />
+              </Field>
+
+              <Field label="Major">
+                <Select disabled={!editing} value={major} onValueChange={setMajor}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select major" />
                   </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="early-morning">
-                      Early Morning (5am - 9am)
-                    </SelectItem>
-                    <SelectItem value="morning">
-                      Morning (9am - 12pm)
-                    </SelectItem>
-                    <SelectItem value="afternoon">
-                      Afternoon (12pm - 5pm)
-                    </SelectItem>
-                    <SelectItem value="evening">Evening (5pm - 9pm)</SelectItem>
-                    <SelectItem value="night">Night (9pm - 1am)</SelectItem>
-                    <SelectItem value="late-night">
-                      Late Night (1am - 5am)
-                    </SelectItem>
+                  <SelectContent className="bg-popover z-50 border shadow-lg">
+                    <SelectItem value="computer-science">Computer Science</SelectItem>
+                    <SelectItem value="engineering">Engineering</SelectItem>
+                    <SelectItem value="business">Business</SelectItem>
+                    <SelectItem value="other">Other</SelectItem>
                   </SelectContent>
                 </Select>
-              </div>
+              </Field>
+
+              <Field label="Bio">
+                <Textarea disabled={!editing} value={bio} onChange={e => setBio(e.target.value)} />
+              </Field>
+
+              <Field label="Courses">
+                <Input disabled={!editing} value={courses} onChange={e => setCourses(e.target.value)} />
+              </Field>
+
+              <Field label="Interests">
+                <Input disabled={!editing} value={interests} onChange={e => setInterests(e.target.value)} />
+              </Field>
             </CardContent>
           </Card>
 
-          <div className="mt-6 flex justify-end">
-            <Button
-              type="submit"
-              className="bg-[#8B1538] hover:bg-[#A91D3A] min-w-[120px]"
-              disabled={loading}
-            >
-              {loading ? (
-                <>
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  Saving...
-                </>
-              ) : (
-                "Save Changes"
-              )}
-            </Button>
-          </div>
+          {editing && (
+            <div className="mt-6 flex justify-end gap-3">
+              <Button type="button" variant="outline" onClick={cancelEdit}>
+                Cancel
+              </Button>
+              <Button type="submit" disabled={saving}>
+                {saving ? "Saving..." : "Save Changes"}
+              </Button>
+            </div>
+          )}
         </form>
       </div>
     </div>
-  );
+  )
+}
+
+/* -------------------- SMALL HELPER -------------------- */
+
+function Field({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div className="space-y-2">
+      <Label>{label}</Label>
+      {children}
+    </div>
+  )
 }
