@@ -10,15 +10,16 @@ const nextConfig = {
     unoptimized: true,
   },
   async rewrites() {
-    const backend = process.env.BACKEND_URL
-    if (!backend) return []
+    const backend = process.env.NEXT_PUBLIC_API_URL;
+    if (!backend) return [];
+
     return [
       {
-        source: '/api/:path*',
+        source: "/api/:path*",
         destination: `${backend}/api/:path*`,
       },
-    ]
+    ];
   },
-}
+};
 
-export default nextConfig
+export default nextConfig;
