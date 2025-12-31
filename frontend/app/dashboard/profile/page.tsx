@@ -23,41 +23,8 @@ import {
 } from "@/components/ui/select"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Loader2, CheckCircle, ArrowLeft, Pencil } from "lucide-react"
-
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || "/api"
-
-/* -------------------- API -------------------- */
-
-const profileService = {
-  getProfile: async () => {
-    const token = localStorage.getItem("auth_token")
-    if (!token) throw new Error("Not authenticated")
-
-    const res = await fetch(`${API_BASE}/profile`, {
-      headers: { Authorization: `Bearer ${token}` },
-    })
-
-    if (!res.ok) throw new Error("Failed to load profile")
-    return res.json()
-  },
-
-  updateProfile: async (data: any) => {
-    const token = localStorage.getItem("auth_token")
-    if (!token) throw new Error("Not authenticated")
-
-    const res = await fetch(`${API_BASE}/profile`, {
-      method: "PUT",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify(data),
-    })
-
-    if (!res.ok) throw new Error("Failed to update profile")
-    return res.json()
-  },
-}
+import { authService } from "@/lib/api/services/auth.service"
+import { profileService, type ProfileData } from "@/lib/api/services/profile.service"
 
 /* -------------------- PAGE -------------------- */
 
@@ -85,7 +52,7 @@ export default function ProfilePage() {
   /* -------------------- LOAD -------------------- */
 
   useEffect(() => {
-    const token = localStorage.getItem("auth_token")
+    const token = typeof window !== "undefined" ? localStorage.getItem("auth_token") : null
     if (!token) {
       setInitialLoading(false)
       return
@@ -93,17 +60,26 @@ export default function ProfilePage() {
 
     const load = async () => {
       try {
-        const profile = await profileService.getProfile()
+        // Get current user to know which profile to load
+        const me = await authService.me()
+        const userId = me.user?.id || me.user?.sub || me.id
+
+        if (!userId) {
+          throw new Error("Could not determine current user id")
+        }
+
+        const profile = await profileService.getById(userId)
 
         const normalized = {
-          fullName: profile.full_name || "",
+          fullName: profile.fullName || "",
           major: profile.major || "",
           year: profile.year || "",
           bio: profile.bio || "",
-          learningStyle: profile.learning_style || "",
-          studyTimePreference: profile.study_preference || "",
-          interests: (profile.interests || []).join(", "),
-          courses: (profile.courses || []).join(", "),
+          learningStyle: profile.learningStyle || "",
+          studyTimePreference: profile.studyPreference || "",
+          interests: (profile.interests || []).join(", ") || "",
+          // courses are not stored on the backend profile model yet; keep as empty string for now
+          courses: "",
         }
 
         setOriginalData(normalized)
@@ -117,7 +93,7 @@ export default function ProfilePage() {
         setInterests(normalized.interests)
         setCourses(normalized.courses)
       } catch (err: any) {
-        setError(err.message)
+        setError(err.message || "Failed to load profile")
       } finally {
         setInitialLoading(false)
       }
@@ -134,25 +110,38 @@ export default function ProfilePage() {
     setError("")
     setSuccess(false)
 
-    const payload = {
-      full_name: fullName,
+    const parsedInterests = interests
+      .split(",")
+      .map((i) => i.trim())
+      .filter(Boolean)
+
+    const payload: ProfileData = {
+      fullName,
       major,
       year,
       bio,
-      learning_style: learningStyle,
-      study_preference: studyTimePreference,
-      interests: interests.split(",").map(i => i.trim()).filter(Boolean),
-      courses: courses.split(",").map(c => c.trim()).filter(Boolean),
+      learningStyle,
+      studyPreference: studyTimePreference,
+      interests: parsedInterests,
     }
 
     try {
-      await profileService.updateProfile(payload)
+      await profileService.upsert(payload)
       setSuccess(true)
       setEditing(false)
-      setOriginalData({ ...payload, interests, courses })
+      setOriginalData({
+        fullName,
+        major,
+        year,
+        bio,
+        learningStyle,
+        studyTimePreference,
+        interests,
+        courses,
+      })
       setTimeout(() => setSuccess(false), 3000)
     } catch (err: any) {
-      setError(err.message)
+      setError(err.response?.data?.error || err.message || "Failed to update profile")
     } finally {
       setSaving(false)
     }
@@ -240,10 +229,10 @@ export default function ProfilePage() {
 
               <Field label="Major">
                 <Select disabled={!editing} value={major} onValueChange={setMajor}>
-                  <SelectTrigger>
+                  <SelectTrigger className="w-full bg-white border border-input">
                     <SelectValue placeholder="Select major" />
                   </SelectTrigger>
-                  <SelectContent className="bg-popover z-50 border shadow-lg">
+                  <SelectContent className="bg-white text-foreground border border-gray-200 shadow-lg z-50 min-w-[12rem]">
                     <SelectItem value="computer-science">Computer Science</SelectItem>
                     <SelectItem value="engineering">Engineering</SelectItem>
                     <SelectItem value="business">Business</SelectItem>
