@@ -26,6 +26,7 @@ interface Match {
   study_preference: string
   match_score: number
   common_courses: string[]
+  common_interests: string[]
   is_connected: boolean
 }
 
@@ -82,32 +83,77 @@ export default function MatchesPage() {
       const allProfiles = await profileService.getAll()
 
       const matchedProfiles = allProfiles
+        .filter(profile => profile.user_id !== user.id) // Don't match with yourself
         .map((profile) => {
-          const commonCourses: string[] = []
-          const commonInterests = (profile.interests || []).filter((interest: string) =>
-            (currentProfile.interests || []).includes(interest),
+          // Calculate common courses properly
+          const currentCourses = currentProfile.courses || []
+          const profileCourses = profile.courses || []
+          const commonCourses = profileCourses.filter((course: string) => 
+            currentCourses.includes(course)
           )
 
+          // Calculate common interests
+          const currentInterests = currentProfile.interests || []
+          const profileInterests = profile.interests || []
+          const commonInterests = profileInterests.filter((interest: string) =>
+            currentInterests.includes(interest)
+          )
+
+          // NEW SCORING: Interests are PRIMARY factor
           let score = 0
-          score += commonCourses.length * 30
-          score += commonInterests.length * 15
-          score += profile.major === currentProfile.major ? 20 : 0
-          score += profile.learning_style === currentProfile.learning_style ? 15 : 0
-          score += profile.study_preference === currentProfile.study_preference ? 10 : 0
+          
+          // Interests: 40 points each (PRIMARY FACTOR)
+          score += commonInterests.length * 40
+          
+          // Courses: 20 points each (secondary)
+          score += commonCourses.length * 20
+          
+          // Major: 10 points (tertiary)
+          if (profile.major && currentProfile.major && profile.major === currentProfile.major) {
+            score += 10
+          }
+          
+          // Learning style: 5 points (bonus)
+          if (profile.learningStyle && currentProfile.learningStyle && 
+              profile.learningStyle === currentProfile.learningStyle) {
+            score += 5
+          }
+          
+          // Study preference: 5 points (bonus)
+          if (profile.studyPreference && currentProfile.studyPreference && 
+              profile.studyPreference === currentProfile.studyPreference) {
+            score += 5
+          }
 
           return {
-            ...profile,
+            user_id: profile.userId || profile.user_id,
+            full_name: profile.fullName || profile.full_name || 'Unknown',
+            major: profile.major || 'Not specified',
+            year: profile.year || 'Not specified',
+            bio: profile.bio || '',
+            courses: profileCourses,
+            interests: profileInterests,
+            learning_style: profile.learningStyle || profile.learning_style || 'Not specified',
+            study_preference: profile.studyPreference || profile.study_preference || 'Not specified',
             match_score: Math.min(score, 100),
             common_courses: commonCourses,
-            is_connected: connectedIds.includes(profile.user_id),
+            common_interests: commonInterests,
+            is_connected: connectedIds.includes(profile.userId || profile.user_id),
           }
         })
-        .filter((profile) => profile.match_score > 0 && !profile.is_connected)
+        // Show profiles with at least 1 common interest OR 10%+ match score
+        .filter((profile) => {
+          if (profile.is_connected) return false
+          // Always show if there's at least 1 common interest
+          if (profile.common_interests && profile.common_interests.length > 0) return true
+          // Otherwise require at least 10% match
+          return profile.match_score >= 10
+        })
         .sort((a, b) => b.match_score - a.match_score)
 
       setMatches(matchedProfiles)
     } catch (err) {
-      console.error("[v0] Error loading matches:", err)
+      console.error("Error loading matches:", err)
     } finally {
       setLoading(false)
     }
@@ -302,6 +348,23 @@ export default function MatchesPage() {
                         </div>
                       )}
 
+                      {/* Common Interests - Add this BEFORE All Courses section */}
+                      {currentMatch.common_interests && currentMatch.common_interests.length > 0 && (
+                        <div>
+                          <h3 className="font-semibold mb-3 flex items-center gap-2">
+                            <Sparkles className="w-4 h-4 text-[#8B1538]" />
+                            Common Interests ({currentMatch.common_interests.length})
+                          </h3>
+                          <div className="flex flex-wrap gap-2">
+                            {currentMatch.common_interests.map((interest) => (
+                              <Badge key={interest} className="bg-[#8B1538] hover:bg-[#A91D3A]">
+                                {interest}
+                              </Badge>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
                       {/* All Courses */}
                       <div>
                         <h3 className="font-semibold mb-3 flex items-center gap-2">
@@ -322,11 +385,11 @@ export default function MatchesPage() {
                         <div>
                           <h3 className="font-semibold mb-3 flex items-center gap-2">
                             <Sparkles className="w-4 h-4 text-[#8B1538]" />
-                            Interests
+                            All Interests
                           </h3>
                           <div className="flex flex-wrap gap-2">
                             {currentMatch.interests.map((interest) => (
-                              <Badge key={interest} variant="outline">
+                              <Badge key={interest} variant="secondary">
                                 {interest}
                               </Badge>
                             ))}

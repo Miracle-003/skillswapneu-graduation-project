@@ -22,35 +22,35 @@ export function calculateMatchScore(currentUser: UserProfile, otherUser: UserPro
   let score = 0
   const reasons: string[] = []
 
-  // Course overlap (highest weight)
-  if (commonCourses.length > 0) {
-    const coursePoints = commonCourses.length * 30
-    score += coursePoints
-    reasons.push(`${commonCourses.length} common course${commonCourses.length > 1 ? "s" : ""}`)
-  }
-
-  // Interest overlap
+  // Interest overlap (PRIMARY FACTOR - 40 points each)
   if (commonInterests.length > 0) {
-    const interestPoints = commonInterests.length * 15
+    const interestPoints = commonInterests.length * 40
     score += interestPoints
     reasons.push(`${commonInterests.length} shared interest${commonInterests.length > 1 ? "s" : ""}`)
   }
 
-  // Same major
+  // Course overlap (20 points each)
+  if (commonCourses.length > 0) {
+    const coursePoints = commonCourses.length * 20
+    score += coursePoints
+    reasons.push(`${commonCourses.length} common course${commonCourses.length > 1 ? "s" : ""}`)
+  }
+
+  // Same major (10 points)
   if (otherUser.major === currentUser.major) {
-    score += 20
+    score += 10
     reasons.push("Same major")
   }
 
-  // Compatible learning style
+  // Compatible learning style (5 points)
   if (otherUser.learning_style === currentUser.learning_style) {
-    score += 15
+    score += 5
     reasons.push("Compatible learning style")
   }
 
-  // Compatible study time
+  // Compatible study time (5 points)
   if (otherUser.study_preference === currentUser.study_preference) {
-    score += 10
+    score += 5
     reasons.push("Similar study schedule")
   }
 
