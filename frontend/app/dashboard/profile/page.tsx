@@ -78,8 +78,7 @@ export default function ProfilePage() {
           learningStyle: profile.learningStyle || "",
           studyTimePreference: profile.studyPreference || "",
           interests: (profile.interests || []).join(", ") || "",
-          // courses are not stored on the backend profile model yet; keep as empty string for now
-          courses: "",
+          courses: (profile.courses || []).join(", ") || "",
         }
 
         setOriginalData(normalized)
@@ -115,6 +114,11 @@ export default function ProfilePage() {
       .map((i) => i.trim())
       .filter(Boolean)
 
+    const parsedCourses = courses
+      .split(",")
+      .map((c) => c.trim())
+      .filter(Boolean)
+
     const payload: ProfileData = {
       fullName,
       major,
@@ -123,6 +127,7 @@ export default function ProfilePage() {
       learningStyle,
       studyPreference: studyTimePreference,
       interests: parsedInterests,
+      courses: parsedCourses,
     }
 
     try {
@@ -241,8 +246,52 @@ export default function ProfilePage() {
                 </Select>
               </Field>
 
+              <Field label="Year">
+                <Select disabled={!editing} value={year} onValueChange={setYear}>
+                  <SelectTrigger className="w-full bg-white border border-input">
+                    <SelectValue placeholder="Select year" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-white text-foreground border border-gray-200 shadow-lg z-50 min-w-[12rem]">
+                    <SelectItem value="Freshman">Freshman</SelectItem>
+                    <SelectItem value="Sophomore">Sophomore</SelectItem>
+                    <SelectItem value="Junior">Junior</SelectItem>
+                    <SelectItem value="Senior">Senior</SelectItem>
+                    <SelectItem value="Graduate">Graduate</SelectItem>
+                  </SelectContent>
+                </Select>
+              </Field>
+
               <Field label="Bio">
                 <Textarea disabled={!editing} value={bio} onChange={e => setBio(e.target.value)} />
+              </Field>
+
+              <Field label="Learning Style">
+                <Select disabled={!editing} value={learningStyle} onValueChange={setLearningStyle}>
+                  <SelectTrigger className="w-full bg-white border border-input">
+                    <SelectValue placeholder="Select learning style" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-white text-foreground border border-gray-200 shadow-lg z-50 min-w-[12rem]">
+                    <SelectItem value="Visual">Visual</SelectItem>
+                    <SelectItem value="Auditory">Auditory</SelectItem>
+                    <SelectItem value="Kinesthetic">Kinesthetic</SelectItem>
+                    <SelectItem value="Reading/Writing">Reading/Writing</SelectItem>
+                  </SelectContent>
+                </Select>
+              </Field>
+
+              <Field label="Study Preference">
+                <Select disabled={!editing} value={studyTimePreference} onValueChange={setStudyTimePreference}>
+                  <SelectTrigger className="w-full bg-white border border-input">
+                    <SelectValue placeholder="Select study preference" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-white text-foreground border border-gray-200 shadow-lg z-50 min-w-[12rem]">
+                    <SelectItem value="Morning">Morning</SelectItem>
+                    <SelectItem value="Afternoon">Afternoon</SelectItem>
+                    <SelectItem value="Evening">Evening</SelectItem>
+                    <SelectItem value="Night">Night</SelectItem>
+                    <SelectItem value="Flexible">Flexible</SelectItem>
+                  </SelectContent>
+                </Select>
               </Field>
 
               <Field label="Courses">

@@ -53,6 +53,7 @@ router.post("/", async (req, res) => {
       learningStyle,
       studyPreference,
       interests,
+      courses,
     } = req.body || {}
 
     // Ensure required fields exist for first-time profile creation.
@@ -69,6 +70,7 @@ router.post("/", async (req, res) => {
       ...(learningStyle !== undefined ? { learningStyle } : {}),
       ...(studyPreference !== undefined ? { studyPreference } : {}),
       ...(Array.isArray(interests) ? { interests } : {}),
+      ...(Array.isArray(courses) ? { courses } : {}),
       updatedAt: new Date(),
     }
 
