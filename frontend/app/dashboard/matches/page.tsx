@@ -78,13 +78,21 @@ export default function MatchesPage() {
         return
       }
 
-      const { data: existing } = await apiClient.get(`/connections/user/${user.id}?status=accepted`)
-      const connectedIds: string[] = (existing?.connections || [])
-        .map((c: any) => {
-          const uid1 = c.userId1 || c.user_id_1
-          const uid2 = c.userId2 || c.user_id_2
-          return uid1 === user.id ? uid2 : uid1
-        })
+      // Get existing connections
+      let connectedIds: string[] = []
+      try {
+        const { data: existing } = await apiClient.get(`/connections/user/${user.id}?status=accepted`)
+        connectedIds = (existing?.connections || [])
+          .map((c: any) => {
+            const uid1 = c.userId1 || c.user_id_1
+            const uid2 = c.userId2 || c.user_id_2
+            return uid1 === user.id ? uid2 : uid1
+          })
+          .filter(Boolean) // Remove any undefined/null values
+      } catch (connErr) {
+        console.warn("Could not load connections, continuing without filtering:", connErr)
+        // Continue without connection filtering - better to show all matches than none
+      }
 
       const allProfiles = await profileService.getAll()
 
