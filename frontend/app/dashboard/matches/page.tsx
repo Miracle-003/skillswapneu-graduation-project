@@ -78,12 +78,16 @@ export default function MatchesPage() {
 
       const { data: existing } = await apiClient.get(`/connections/user/${user.id}?status=accepted`)
       const connectedIds: string[] = (existing?.connections || [])
-        .map((c: any) => (c.userId1 === user.id ? c.userId2 : c.userId1))
+        .map((c: any) => {
+          const uid1 = c.userId1 || c.user_id_1
+          const uid2 = c.userId2 || c.user_id_2
+          return uid1 === user.id ? uid2 : uid1
+        })
 
       const allProfiles = await profileService.getAll()
 
       const matchedProfiles = allProfiles
-        .filter(profile => profile.user_id !== user.id) // Don't match with yourself
+        .filter(profile => (profile.userId || profile.user_id) !== user.id) // Don't match with yourself
         .map((profile) => {
           // Calculate common courses properly
           const currentCourses = currentProfile.courses || []
