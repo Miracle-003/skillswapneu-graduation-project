@@ -35,6 +35,7 @@ export default function MatchesPage() {
   const [currentIndex, setCurrentIndex] = useState(0)
   const [profileScroll, setProfileScroll] = useState(0)
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
   const [showMatchAnimation, setShowMatchAnimation] = useState(false)
   const { user } = useRequireAuth()
 
@@ -68,6 +69,7 @@ export default function MatchesPage() {
 
   const loadMatches = async () => {
     try {
+      setError(null)
       if (!user) return
       const currentProfile = await profileService.getById(user.id)
 
@@ -158,6 +160,7 @@ export default function MatchesPage() {
       setMatches(matchedProfiles)
     } catch (err) {
       console.error("Error loading matches:", err)
+      setError(err instanceof Error ? err.message : "Failed to load matches. Please try again.")
     } finally {
       setLoading(false)
     }
@@ -248,6 +251,19 @@ export default function MatchesPage() {
           <div className="text-center py-12">
             <p className="text-muted-foreground">Finding your perfect study partners...</p>
           </div>
+        ) : error ? (
+          <Card>
+            <CardContent className="py-12 text-center">
+              <div className="w-12 h-12 mx-auto mb-4 rounded-full bg-red-100 flex items-center justify-center">
+                <span className="text-red-600 text-2xl">!</span>
+              </div>
+              <h3 className="text-lg font-semibold mb-2 text-red-600">Error Loading Matches</h3>
+              <p className="text-muted-foreground mb-4">{error}</p>
+              <Button onClick={() => loadMatches()} className="bg-[#8B1538] hover:bg-[#A91D3A]">
+                Try Again
+              </Button>
+            </CardContent>
+          </Card>
         ) : matches.length === 0 || currentIndex >= matches.length ? (
           <Card>
             <CardContent className="py-12 text-center">
