@@ -13,7 +13,7 @@ import { ArrowLeft, Heart, X, ChevronDown, BookOpen, Users, Sparkles, AlertCircl
 import Link from "next/link"
 import { motion, AnimatePresence } from "framer-motion"
 import { toast } from "sonner"
-import { calculateProfileCompleteness } from "@/lib/matching-algorithm"
+import { calculateProfileCompleteness, calculateMatchScore, NOT_SPECIFIED } from "@/lib/matching-algorithm"
 
 interface Match {
   user_id: string
@@ -94,10 +94,10 @@ export default function MatchesPage() {
         user_id: currentProfile.userId || currentProfile.user_id,
         courses: currentProfile.courses || [],
         interests: currentProfile.interests || [],
-        major: currentProfile.major || 'Not specified',
-        year: currentProfile.year || 'Not specified',
-        learning_style: currentProfile.learningStyle || currentProfile.learning_style || 'Not specified',
-        study_preference: currentProfile.studyPreference || currentProfile.study_preference || 'Not specified',
+        major: currentProfile.major || NOT_SPECIFIED,
+        year: currentProfile.year || NOT_SPECIFIED,
+        learning_style: currentProfile.learningStyle || currentProfile.learning_style || NOT_SPECIFIED,
+        study_preference: currentProfile.studyPreference || currentProfile.study_preference || NOT_SPECIFIED,
       }
       const currentUserCompleteness = calculateProfileCompleteness(currentUserFormatted)
       setUserProfileCompleteness(currentUserCompleteness)
@@ -127,102 +127,40 @@ export default function MatchesPage() {
         .filter(profile => (profile.userId || profile.user_id) !== user.id) // Don't match with yourself
         .filter(profile => !connectedIds.includes(profile.userId || profile.user_id)) // Filter out connected users
         .map((profile) => {
-          // Calculate common courses properly
-          const currentCourses = currentProfile.courses || []
+          // Prepare both profiles in the format expected by calculateMatchScore
           const profileCourses = profile.courses || []
-          const commonCourses = profileCourses.filter((course: string) => 
-            currentCourses.includes(course)
-          )
-
-          // Calculate common interests
-          const currentInterests = currentProfile.interests || []
           const profileInterests = profile.interests || []
-          const commonInterests = profileInterests.filter((interest: string) =>
-            currentInterests.includes(interest)
-          )
-
-          // IMPROVED SCORING with base scores
-          let score = 0
-          
-          // Interests: 40 points each (PRIMARY FACTOR)
-          score += commonInterests.length * 40
-          
-          // Courses: 20 points each (secondary)
-          score += commonCourses.length * 20
-          
-          // Same major: 10 points (tertiary)
-          const profileMajor = profile.major
-          const currentMajor = currentProfile.major
-          if (profileMajor && currentMajor && 
-              profileMajor !== 'Not specified' && currentMajor !== 'Not specified' &&
-              profileMajor === currentMajor) {
-            score += 10
-          } else if (profileMajor && profileMajor !== 'Not specified') {
-            // Base score for having a major defined (5 points)
-            score += 5
-          }
-          
-          // Same year: 5 points
-          const profileYear = profile.year
-          const currentYear = currentProfile.year
-          if (profileYear && currentYear &&
-              profileYear !== 'Not specified' && currentYear !== 'Not specified' &&
-              profileYear === currentYear) {
-            score += 5
-          }
-          
-          // Learning style: 5 points (bonus)
           const profileLearning = profile.learningStyle || profile.learning_style
-          const currentLearning = currentProfile.learningStyle || currentProfile.learning_style
-          if (profileLearning && currentLearning && 
-              profileLearning !== 'Not specified' && currentLearning !== 'Not specified' &&
-              profileLearning === currentLearning) {
-            score += 5
-          }
-          
-          // Study preference: 5 points (bonus)
           const profileStudy = profile.studyPreference || profile.study_preference
-          const currentStudy = currentProfile.studyPreference || currentProfile.study_preference
-          if (profileStudy && currentStudy && 
-              profileStudy !== 'Not specified' && currentStudy !== 'Not specified' &&
-              profileStudy === currentStudy) {
-            score += 5
-          }
 
-          // Calculate profile completeness
-          const profileFormatted = {
+          const otherUserFormatted = {
             user_id: profile.userId || profile.user_id,
             courses: profileCourses,
             interests: profileInterests,
-            major: profile.major || 'Not specified',
-            year: profile.year || 'Not specified',
-            learning_style: profileLearning || 'Not specified',
-            study_preference: profileStudy || 'Not specified',
+            major: profile.major || NOT_SPECIFIED,
+            year: profile.year || NOT_SPECIFIED,
+            learning_style: profileLearning || NOT_SPECIFIED,
+            study_preference: profileStudy || NOT_SPECIFIED,
           }
-          const profileCompleteness = calculateProfileCompleteness(profileFormatted)
 
-          // Bonus for complete profiles (up to 10 points)
-          if (profileCompleteness >= 80) {
-            score += 10
-          } else if (profileCompleteness >= 50) {
-            score += 5
-          }
+          // Use the matching algorithm to calculate score and completeness
+          const matchResult = calculateMatchScore(currentUserFormatted, otherUserFormatted)
 
           return {
             user_id: profile.userId || profile.user_id,
             full_name: profile.fullName || profile.full_name || 'Unknown',
-            major: profile.major || 'Not specified',
-            year: profile.year || 'Not specified',
+            major: profile.major || NOT_SPECIFIED,
+            year: profile.year || NOT_SPECIFIED,
             bio: profile.bio || '',
             courses: profileCourses,
             interests: profileInterests,
-            learning_style: profileLearning || 'Not specified',
-            study_preference: profileStudy || 'Not specified',
-            match_score: Math.min(score, 100),
-            common_courses: commonCourses,
-            common_interests: commonInterests,
+            learning_style: profileLearning || NOT_SPECIFIED,
+            study_preference: profileStudy || NOT_SPECIFIED,
+            match_score: matchResult.match_score,
+            common_courses: matchResult.common_courses,
+            common_interests: matchResult.common_interests,
             is_connected: false, // Already filtered out above
-            profile_completeness: profileCompleteness,
+            profile_completeness: matchResult.profile_completeness,
           }
         })
         // Sort by match score (highest first), then by profile completeness

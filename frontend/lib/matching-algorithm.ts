@@ -17,6 +17,9 @@ interface MatchResult {
   profile_completeness: number
 }
 
+// Constants
+export const NOT_SPECIFIED = 'Not specified'
+
 // Scoring constants for profile completeness
 const PROFILE_COMPLETENESS_WEIGHTS = {
   courses: 25,
@@ -46,10 +49,10 @@ export function calculateProfileCompleteness(profile: UserProfile): number {
 
   if (profile.courses && profile.courses.length > 0) completeness += PROFILE_COMPLETENESS_WEIGHTS.courses
   if (profile.interests && profile.interests.length > 0) completeness += PROFILE_COMPLETENESS_WEIGHTS.interests
-  if (profile.major && profile.major !== 'Not specified') completeness += PROFILE_COMPLETENESS_WEIGHTS.major
-  if (profile.year && profile.year !== 'Not specified') completeness += PROFILE_COMPLETENESS_WEIGHTS.year
-  if (profile.learning_style && profile.learning_style !== 'Not specified') completeness += PROFILE_COMPLETENESS_WEIGHTS.learning_style
-  if (profile.study_preference && profile.study_preference !== 'Not specified') completeness += PROFILE_COMPLETENESS_WEIGHTS.study_preference
+  if (profile.major && profile.major !== NOT_SPECIFIED) completeness += PROFILE_COMPLETENESS_WEIGHTS.major
+  if (profile.year && profile.year !== NOT_SPECIFIED) completeness += PROFILE_COMPLETENESS_WEIGHTS.year
+  if (profile.learning_style && profile.learning_style !== NOT_SPECIFIED) completeness += PROFILE_COMPLETENESS_WEIGHTS.learning_style
+  if (profile.study_preference && profile.study_preference !== NOT_SPECIFIED) completeness += PROFILE_COMPLETENESS_WEIGHTS.study_preference
 
   return completeness
 }
@@ -77,11 +80,11 @@ export function calculateMatchScore(currentUser: UserProfile, otherUser: UserPro
 
   // Same major
   if (otherUser.major && currentUser.major && 
-      otherUser.major !== 'Not specified' && currentUser.major !== 'Not specified' &&
+      otherUser.major !== NOT_SPECIFIED && currentUser.major !== NOT_SPECIFIED &&
       otherUser.major === currentUser.major) {
     score += MATCH_SCORE_WEIGHTS.same_major
     reasons.push("Same major")
-  } else if (otherUser.major && otherUser.major !== 'Not specified') {
+  } else if (otherUser.major && otherUser.major !== NOT_SPECIFIED) {
     // Base score for having a major defined
     score += MATCH_SCORE_WEIGHTS.has_major
     reasons.push("Has profile info")
@@ -89,7 +92,7 @@ export function calculateMatchScore(currentUser: UserProfile, otherUser: UserPro
 
   // Same year
   if (otherUser.year && currentUser.year && 
-      otherUser.year !== 'Not specified' && currentUser.year !== 'Not specified' &&
+      otherUser.year !== NOT_SPECIFIED && currentUser.year !== NOT_SPECIFIED &&
       otherUser.year === currentUser.year) {
     score += MATCH_SCORE_WEIGHTS.same_year
     reasons.push("Same year")
@@ -97,7 +100,7 @@ export function calculateMatchScore(currentUser: UserProfile, otherUser: UserPro
 
   // Compatible learning style
   if (otherUser.learning_style && currentUser.learning_style &&
-      otherUser.learning_style !== 'Not specified' && currentUser.learning_style !== 'Not specified' &&
+      otherUser.learning_style !== NOT_SPECIFIED && currentUser.learning_style !== NOT_SPECIFIED &&
       otherUser.learning_style === currentUser.learning_style) {
     score += MATCH_SCORE_WEIGHTS.learning_style
     reasons.push("Compatible learning style")
@@ -105,7 +108,7 @@ export function calculateMatchScore(currentUser: UserProfile, otherUser: UserPro
 
   // Compatible study time
   if (otherUser.study_preference && currentUser.study_preference &&
-      otherUser.study_preference !== 'Not specified' && currentUser.study_preference !== 'Not specified' &&
+      otherUser.study_preference !== NOT_SPECIFIED && currentUser.study_preference !== NOT_SPECIFIED &&
       otherUser.study_preference === currentUser.study_preference) {
     score += MATCH_SCORE_WEIGHTS.study_preference
     reasons.push("Similar study schedule")
