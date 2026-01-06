@@ -9,7 +9,7 @@ import { ScrollArea } from "@/components/ui/scroll-area"
 import { useRequireAuth } from "@/lib/api/hooks/useRequireAuth"
 import { profileService } from "@/lib/api/services/profile.service"
 import { apiClient } from "@/lib/api/axios-client"
-import { ArrowLeft, Heart, X, ChevronDown, BookOpen, Users, Sparkles } from "lucide-react"
+import { ArrowLeft, Heart, X, ChevronDown, BookOpen, Users, Sparkles, AlertCircle, CheckCircle } from "lucide-react"
 import Link from "next/link"
 import { motion, AnimatePresence } from "framer-motion"
 import { toast } from "sonner"
@@ -28,6 +28,7 @@ interface Match {
   common_courses: string[]
   common_interests: string[]
   is_connected: boolean
+  profile_completeness: number
 }
 
 export default function MatchesPage() {
@@ -37,6 +38,7 @@ export default function MatchesPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [showMatchAnimation, setShowMatchAnimation] = useState(false)
+  const [userProfileCompleteness, setUserProfileCompleteness] = useState<number>(100)
   const { user } = useRequireAuth()
 
   useEffect(() => {
@@ -78,6 +80,34 @@ export default function MatchesPage() {
         return
       }
 
+      console.log("[Matches Page] Current user profile loaded:", {
+        user_id: user.id,
+        courses: currentProfile.courses?.length || 0,
+        interests: currentProfile.interests?.length || 0,
+        major: currentProfile.major
+      })
+
+      // Calculate profile completeness for current user
+      const calculateProfileCompleteness = (profile: any): number => {
+        let completeness = 0
+        const weights = { courses: 25, interests: 25, major: 20, year: 10, learningStyle: 10, studyPreference: 10 }
+        
+        if (profile.courses && profile.courses.length > 0) completeness += weights.courses
+        if (profile.interests && profile.interests.length > 0) completeness += weights.interests
+        if (profile.major && profile.major !== 'Not specified') completeness += weights.major
+        if (profile.year && profile.year !== 'Not specified') completeness += weights.year
+        if ((profile.learningStyle || profile.learning_style) && 
+            (profile.learningStyle || profile.learning_style) !== 'Not specified') completeness += weights.learningStyle
+        if ((profile.studyPreference || profile.study_preference) && 
+            (profile.studyPreference || profile.study_preference) !== 'Not specified') completeness += weights.studyPreference
+        
+        return completeness
+      }
+
+      const currentUserCompleteness = calculateProfileCompleteness(currentProfile)
+      setUserProfileCompleteness(currentUserCompleteness)
+      console.log(`[Matches Page] Current user profile completeness: ${currentUserCompleteness}%`)
+
       // Get existing connections
       let connectedIds: string[] = []
       try {
@@ -89,15 +119,18 @@ export default function MatchesPage() {
             return uid1 === user.id ? uid2 : uid1
           })
           .filter(Boolean) // Remove any undefined/null values
+        console.log(`[Matches Page] Found ${connectedIds.length} existing connections`)
       } catch (connErr) {
         console.warn("Could not load connections, continuing without filtering:", connErr)
         // Continue without connection filtering - better to show all matches than none
       }
 
       const allProfiles = await profileService.getAll()
+      console.log(`[Matches Page] Retrieved ${allProfiles.length} total profiles`)
 
       const matchedProfiles = allProfiles
         .filter(profile => (profile.userId || profile.user_id) !== user.id) // Don't match with yourself
+        .filter(profile => !connectedIds.includes(profile.userId || profile.user_id)) // Filter out connected users
         .map((profile) => {
           // Calculate common courses properly
           const currentCourses = currentProfile.courses || []
@@ -113,7 +146,7 @@ export default function MatchesPage() {
             currentInterests.includes(interest)
           )
 
-          // NEW SCORING: Interests are PRIMARY factor
+          // IMPROVED SCORING with base scores
           let score = 0
           
           // Interests: 40 points each (PRIMARY FACTOR)
@@ -122,20 +155,52 @@ export default function MatchesPage() {
           // Courses: 20 points each (secondary)
           score += commonCourses.length * 20
           
-          // Major: 10 points (tertiary)
-          if (profile.major && currentProfile.major && profile.major === currentProfile.major) {
+          // Same major: 10 points (tertiary)
+          const profileMajor = profile.major
+          const currentMajor = currentProfile.major
+          if (profileMajor && currentMajor && 
+              profileMajor !== 'Not specified' && currentMajor !== 'Not specified' &&
+              profileMajor === currentMajor) {
             score += 10
+          } else if (profileMajor && profileMajor !== 'Not specified') {
+            // Base score for having a major defined (5 points)
+            score += 5
+          }
+          
+          // Same year: 5 points
+          const profileYear = profile.year
+          const currentYear = currentProfile.year
+          if (profileYear && currentYear &&
+              profileYear !== 'Not specified' && currentYear !== 'Not specified' &&
+              profileYear === currentYear) {
+            score += 5
           }
           
           // Learning style: 5 points (bonus)
-          if (profile.learningStyle && currentProfile.learningStyle && 
-              profile.learningStyle === currentProfile.learningStyle) {
+          const profileLearning = profile.learningStyle || profile.learning_style
+          const currentLearning = currentProfile.learningStyle || currentProfile.learning_style
+          if (profileLearning && currentLearning && 
+              profileLearning !== 'Not specified' && currentLearning !== 'Not specified' &&
+              profileLearning === currentLearning) {
             score += 5
           }
           
           // Study preference: 5 points (bonus)
-          if (profile.studyPreference && currentProfile.studyPreference && 
-              profile.studyPreference === currentProfile.studyPreference) {
+          const profileStudy = profile.studyPreference || profile.study_preference
+          const currentStudy = currentProfile.studyPreference || currentProfile.study_preference
+          if (profileStudy && currentStudy && 
+              profileStudy !== 'Not specified' && currentStudy !== 'Not specified' &&
+              profileStudy === currentStudy) {
+            score += 5
+          }
+
+          // Calculate profile completeness
+          const profileCompleteness = calculateProfileCompleteness(profile)
+
+          // Bonus for complete profiles (up to 10 points)
+          if (profileCompleteness >= 80) {
+            score += 10
+          } else if (profileCompleteness >= 50) {
             score += 5
           }
 
@@ -147,23 +212,33 @@ export default function MatchesPage() {
             bio: profile.bio || '',
             courses: profileCourses,
             interests: profileInterests,
-            learning_style: profile.learningStyle || profile.learning_style || 'Not specified',
-            study_preference: profile.studyPreference || profile.study_preference || 'Not specified',
+            learning_style: profileLearning || 'Not specified',
+            study_preference: profileStudy || 'Not specified',
             match_score: Math.min(score, 100),
             common_courses: commonCourses,
             common_interests: commonInterests,
-            is_connected: connectedIds.includes(profile.userId || profile.user_id),
+            is_connected: false, // Already filtered out above
+            profile_completeness: profileCompleteness,
           }
         })
-        // Show profiles with at least 1 common interest OR 10%+ match score
-        .filter((profile) => {
-          if (profile.is_connected) return false
-          // Always show if there's at least 1 common interest
-          if (profile.common_interests && profile.common_interests.length > 0) return true
-          // Otherwise require at least 10% match
-          return profile.match_score >= 10
+        // Sort by match score (highest first), then by profile completeness
+        .sort((a, b) => {
+          if (b.match_score !== a.match_score) {
+            return b.match_score - a.match_score
+          }
+          return b.profile_completeness - a.profile_completeness
         })
-        .sort((a, b) => b.match_score - a.match_score)
+
+      console.log(`[Matches Page] Found ${matchedProfiles.length} potential matches`)
+      if (matchedProfiles.length > 0) {
+        console.log(`[Matches Page] Top match:`, {
+          name: matchedProfiles[0].full_name,
+          score: matchedProfiles[0].match_score,
+          completeness: matchedProfiles[0].profile_completeness,
+          commonInterests: matchedProfiles[0].common_interests.length,
+          commonCourses: matchedProfiles[0].common_courses.length
+        })
+      }
 
       setMatches(matchedProfiles)
     } catch (err) {
@@ -236,6 +311,28 @@ export default function MatchesPage() {
       </header>
 
       <main className="max-w-2xl mx-auto px-4 py-8">
+        {/* Profile Completeness Banner */}
+        {!loading && userProfileCompleteness < 80 && (
+          <Card className="mb-6 border-[#8B1538]/20 bg-[#8B1538]/5">
+            <CardContent className="py-4">
+              <div className="flex items-start gap-3">
+                <AlertCircle className="w-5 h-5 text-[#8B1538] flex-shrink-0 mt-0.5" />
+                <div className="flex-1">
+                  <h3 className="font-semibold text-[#8B1538] mb-1">
+                    Complete your profile for better matches!
+                  </h3>
+                  <p className="text-sm text-muted-foreground mb-3">
+                    Your profile is {userProfileCompleteness}% complete. Add more information to help us find your perfect study partner.
+                  </p>
+                  <Button asChild size="sm" className="bg-[#8B1538] hover:bg-[#A91D3A]">
+                    <Link href="/dashboard/profile">Complete Profile</Link>
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
         <div className="mb-8 text-center">
           <h1 className="text-3xl font-bold mb-2">Find Your Study Partner</h1>
           <p className="text-muted-foreground">Use arrow keys or buttons to browse matches</p>
@@ -328,13 +425,21 @@ export default function MatchesPage() {
                         {getInitials(currentMatch.full_name)}
                       </AvatarFallback>
                     </Avatar>
-                    <div className="absolute top-4 right-4 flex items-center gap-2 bg-white/90 backdrop-blur-sm px-3 py-2 rounded-full">
-                      <div
-                        className={`w-3 h-3 rounded-full ${currentMatch.match_score >= 70 ? "bg-green-500" : currentMatch.match_score >= 40 ? "bg-yellow-500" : "bg-gray-400"}`}
-                      />
-                      <span className={`text-sm font-bold ${getMatchColor(currentMatch.match_score)}`}>
-                        {currentMatch.match_score}% Match
-                      </span>
+                    <div className="absolute top-4 right-4 flex flex-col gap-2">
+                      <div className="flex items-center gap-2 bg-white/90 backdrop-blur-sm px-3 py-2 rounded-full">
+                        <div
+                          className={`w-3 h-3 rounded-full ${currentMatch.match_score >= 70 ? "bg-green-500" : currentMatch.match_score >= 40 ? "bg-yellow-500" : "bg-gray-400"}`}
+                        />
+                        <span className={`text-sm font-bold ${getMatchColor(currentMatch.match_score)}`}>
+                          {currentMatch.match_score}% Match
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2 bg-white/90 backdrop-blur-sm px-3 py-2 rounded-full">
+                        <CheckCircle className={`w-3 h-3 ${currentMatch.profile_completeness >= 80 ? "text-green-500" : currentMatch.profile_completeness >= 50 ? "text-yellow-500" : "text-gray-400"}`} />
+                        <span className="text-xs text-muted-foreground">
+                          {currentMatch.profile_completeness}% Profile
+                        </span>
+                      </div>
                     </div>
                   </div>
 
@@ -347,6 +452,22 @@ export default function MatchesPage() {
                           {currentMatch.major} • {currentMatch.year}
                         </p>
                       </div>
+
+                      {/* Low Score / Incomplete Profile Hint */}
+                      {(currentMatch.match_score < 20 || currentMatch.profile_completeness < 50) && (
+                        <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                          <div className="flex items-start gap-2">
+                            <AlertCircle className="w-4 h-4 text-blue-600 flex-shrink-0 mt-0.5" />
+                            <p className="text-xs text-blue-800">
+                              {currentMatch.match_score < 20 && currentMatch.profile_completeness < 50
+                                ? "Both profiles are incomplete. Complete your profile to see better compatibility scores!"
+                                : currentMatch.match_score < 20
+                                ? "Low match score. Complete your profile or try connecting to discover shared interests!"
+                                : "This user's profile is incomplete. They might still be a great study partner!"}
+                            </p>
+                          </div>
+                        </div>
+                      )}
 
                       {/* Bio */}
                       {currentMatch.bio && (
