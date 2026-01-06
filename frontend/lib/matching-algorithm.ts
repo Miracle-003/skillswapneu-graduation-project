@@ -17,24 +17,39 @@ interface MatchResult {
   profile_completeness: number
 }
 
-// Calculate profile completeness score (0-100)
-function calculateProfileCompleteness(profile: UserProfile): number {
-  let completeness = 0
-  const weights = {
-    courses: 25,
-    interests: 25,
-    major: 20,
-    year: 10,
-    learning_style: 10,
-    study_preference: 10,
-  }
+// Scoring constants for profile completeness
+const PROFILE_COMPLETENESS_WEIGHTS = {
+  courses: 25,
+  interests: 25,
+  major: 20,
+  year: 10,
+  learning_style: 10,
+  study_preference: 10,
+} as const
 
-  if (profile.courses && profile.courses.length > 0) completeness += weights.courses
-  if (profile.interests && profile.interests.length > 0) completeness += weights.interests
-  if (profile.major && profile.major !== 'Not specified') completeness += weights.major
-  if (profile.year && profile.year !== 'Not specified') completeness += weights.year
-  if (profile.learning_style && profile.learning_style !== 'Not specified') completeness += weights.learning_style
-  if (profile.study_preference && profile.study_preference !== 'Not specified') completeness += weights.study_preference
+// Scoring constants for match calculation
+const MATCH_SCORE_WEIGHTS = {
+  interest: 40,           // Per shared interest
+  course: 20,             // Per common course
+  same_major: 10,
+  has_major: 5,           // Base score for having a major
+  same_year: 5,
+  learning_style: 5,
+  study_preference: 5,
+  complete_profile: 10,   // Bonus for 80%+ complete
+  partial_profile: 5,     // Bonus for 50%+ complete
+} as const
+
+// Calculate profile completeness score (0-100)
+export function calculateProfileCompleteness(profile: UserProfile): number {
+  let completeness = 0
+
+  if (profile.courses && profile.courses.length > 0) completeness += PROFILE_COMPLETENESS_WEIGHTS.courses
+  if (profile.interests && profile.interests.length > 0) completeness += PROFILE_COMPLETENESS_WEIGHTS.interests
+  if (profile.major && profile.major !== 'Not specified') completeness += PROFILE_COMPLETENESS_WEIGHTS.major
+  if (profile.year && profile.year !== 'Not specified') completeness += PROFILE_COMPLETENESS_WEIGHTS.year
+  if (profile.learning_style && profile.learning_style !== 'Not specified') completeness += PROFILE_COMPLETENESS_WEIGHTS.learning_style
+  if (profile.study_preference && profile.study_preference !== 'Not specified') completeness += PROFILE_COMPLETENESS_WEIGHTS.study_preference
 
   return completeness
 }
@@ -46,65 +61,65 @@ export function calculateMatchScore(currentUser: UserProfile, otherUser: UserPro
   let score = 0
   const reasons: string[] = []
 
-  // Interest overlap (PRIMARY FACTOR - 40 points each)
+  // Interest overlap (PRIMARY FACTOR)
   if (commonInterests.length > 0) {
-    const interestPoints = commonInterests.length * 40
+    const interestPoints = commonInterests.length * MATCH_SCORE_WEIGHTS.interest
     score += interestPoints
     reasons.push(`${commonInterests.length} shared interest${commonInterests.length > 1 ? "s" : ""}`)
   }
 
-  // Course overlap (20 points each)
+  // Course overlap
   if (commonCourses.length > 0) {
-    const coursePoints = commonCourses.length * 20
+    const coursePoints = commonCourses.length * MATCH_SCORE_WEIGHTS.course
     score += coursePoints
     reasons.push(`${commonCourses.length} common course${commonCourses.length > 1 ? "s" : ""}`)
   }
 
-  // Same major (10 points base score)
+  // Same major
   if (otherUser.major && currentUser.major && 
       otherUser.major !== 'Not specified' && currentUser.major !== 'Not specified' &&
       otherUser.major === currentUser.major) {
-    score += 10
+    score += MATCH_SCORE_WEIGHTS.same_major
     reasons.push("Same major")
   } else if (otherUser.major && otherUser.major !== 'Not specified') {
-    // Small base score for having a major (5 points)
-    score += 5
+    // Base score for having a major defined
+    score += MATCH_SCORE_WEIGHTS.has_major
     reasons.push("Has profile info")
   }
 
-  // Same year (5 points base score)
+  // Same year
   if (otherUser.year && currentUser.year && 
       otherUser.year !== 'Not specified' && currentUser.year !== 'Not specified' &&
       otherUser.year === currentUser.year) {
-    score += 5
+    score += MATCH_SCORE_WEIGHTS.same_year
     reasons.push("Same year")
   }
 
-  // Compatible learning style (5 points)
+  // Compatible learning style
   if (otherUser.learning_style && currentUser.learning_style &&
       otherUser.learning_style !== 'Not specified' && currentUser.learning_style !== 'Not specified' &&
       otherUser.learning_style === currentUser.learning_style) {
-    score += 5
+    score += MATCH_SCORE_WEIGHTS.learning_style
     reasons.push("Compatible learning style")
   }
 
-  // Compatible study time (5 points)
+  // Compatible study time
   if (otherUser.study_preference && currentUser.study_preference &&
       otherUser.study_preference !== 'Not specified' && currentUser.study_preference !== 'Not specified' &&
       otherUser.study_preference === currentUser.study_preference) {
-    score += 5
+    score += MATCH_SCORE_WEIGHTS.study_preference
     reasons.push("Similar study schedule")
   }
 
   // Calculate profile completeness
   const profileCompleteness = calculateProfileCompleteness(otherUser)
 
-  // Bonus points for profile completeness (up to 10 points)
+  // Bonus points for profile completeness
   if (profileCompleteness >= 80) {
-    score += 10
+    score += MATCH_SCORE_WEIGHTS.complete_profile
     reasons.push("Complete profile")
   } else if (profileCompleteness >= 50) {
-    score += 5
+    score += MATCH_SCORE_WEIGHTS.partial_profile
   }
 
   // Cap at 100

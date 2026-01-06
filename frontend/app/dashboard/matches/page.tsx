@@ -13,6 +13,7 @@ import { ArrowLeft, Heart, X, ChevronDown, BookOpen, Users, Sparkles, AlertCircl
 import Link from "next/link"
 import { motion, AnimatePresence } from "framer-motion"
 import { toast } from "sonner"
+import { calculateProfileCompleteness } from "@/lib/matching-algorithm"
 
 interface Match {
   user_id: string
@@ -88,23 +89,17 @@ export default function MatchesPage() {
       })
 
       // Calculate profile completeness for current user
-      const calculateProfileCompleteness = (profile: any): number => {
-        let completeness = 0
-        const weights = { courses: 25, interests: 25, major: 20, year: 10, learningStyle: 10, studyPreference: 10 }
-        
-        if (profile.courses && profile.courses.length > 0) completeness += weights.courses
-        if (profile.interests && profile.interests.length > 0) completeness += weights.interests
-        if (profile.major && profile.major !== 'Not specified') completeness += weights.major
-        if (profile.year && profile.year !== 'Not specified') completeness += weights.year
-        if ((profile.learningStyle || profile.learning_style) && 
-            (profile.learningStyle || profile.learning_style) !== 'Not specified') completeness += weights.learningStyle
-        if ((profile.studyPreference || profile.study_preference) && 
-            (profile.studyPreference || profile.study_preference) !== 'Not specified') completeness += weights.studyPreference
-        
-        return completeness
+      // Convert profile to the format expected by calculateProfileCompleteness
+      const currentUserFormatted = {
+        user_id: currentProfile.userId || currentProfile.user_id,
+        courses: currentProfile.courses || [],
+        interests: currentProfile.interests || [],
+        major: currentProfile.major || 'Not specified',
+        year: currentProfile.year || 'Not specified',
+        learning_style: currentProfile.learningStyle || currentProfile.learning_style || 'Not specified',
+        study_preference: currentProfile.studyPreference || currentProfile.study_preference || 'Not specified',
       }
-
-      const currentUserCompleteness = calculateProfileCompleteness(currentProfile)
+      const currentUserCompleteness = calculateProfileCompleteness(currentUserFormatted)
       setUserProfileCompleteness(currentUserCompleteness)
       console.log(`[Matches Page] Current user profile completeness: ${currentUserCompleteness}%`)
 
@@ -195,7 +190,16 @@ export default function MatchesPage() {
           }
 
           // Calculate profile completeness
-          const profileCompleteness = calculateProfileCompleteness(profile)
+          const profileFormatted = {
+            user_id: profile.userId || profile.user_id,
+            courses: profileCourses,
+            interests: profileInterests,
+            major: profile.major || 'Not specified',
+            year: profile.year || 'Not specified',
+            learning_style: profileLearning || 'Not specified',
+            study_preference: profileStudy || 'Not specified',
+          }
+          const profileCompleteness = calculateProfileCompleteness(profileFormatted)
 
           // Bonus for complete profiles (up to 10 points)
           if (profileCompleteness >= 80) {
