@@ -87,7 +87,7 @@ export function calculateMatchScore(currentUser: UserProfile, otherUser: UserPro
   } else if (otherUser.major && otherUser.major !== NOT_SPECIFIED) {
     // Base score for having a major defined
     score += MATCH_SCORE_WEIGHTS.has_major
-    reasons.push("Has profile info")
+    reasons.push("Major specified")
   }
 
   // Same year

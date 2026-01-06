@@ -70,6 +70,17 @@ export default function MatchesPage() {
     return () => window.removeEventListener("keydown", handleKeyPress)
   }, [matches, currentIndex])
 
+  // Helper function to convert API profile format to matching algorithm format
+  const formatProfileForMatching = (profile: any) => ({
+    user_id: profile.userId || profile.user_id,
+    courses: profile.courses || [],
+    interests: profile.interests || [],
+    major: profile.major || NOT_SPECIFIED,
+    year: profile.year || NOT_SPECIFIED,
+    learning_style: profile.learningStyle || profile.learning_style || NOT_SPECIFIED,
+    study_preference: profile.studyPreference || profile.study_preference || NOT_SPECIFIED,
+  })
+
   const loadMatches = async () => {
     try {
       setError(null)
@@ -89,16 +100,7 @@ export default function MatchesPage() {
       })
 
       // Calculate profile completeness for current user
-      // Convert profile to the format expected by calculateProfileCompleteness
-      const currentUserFormatted = {
-        user_id: currentProfile.userId || currentProfile.user_id,
-        courses: currentProfile.courses || [],
-        interests: currentProfile.interests || [],
-        major: currentProfile.major || NOT_SPECIFIED,
-        year: currentProfile.year || NOT_SPECIFIED,
-        learning_style: currentProfile.learningStyle || currentProfile.learning_style || NOT_SPECIFIED,
-        study_preference: currentProfile.studyPreference || currentProfile.study_preference || NOT_SPECIFIED,
-      }
+      const currentUserFormatted = formatProfileForMatching(currentProfile)
       const currentUserCompleteness = calculateProfileCompleteness(currentUserFormatted)
       setUserProfileCompleteness(currentUserCompleteness)
       console.log(`[Matches Page] Current user profile completeness: ${currentUserCompleteness}%`)
@@ -127,35 +129,22 @@ export default function MatchesPage() {
         .filter(profile => (profile.userId || profile.user_id) !== user.id) // Don't match with yourself
         .filter(profile => !connectedIds.includes(profile.userId || profile.user_id)) // Filter out connected users
         .map((profile) => {
-          // Prepare both profiles in the format expected by calculateMatchScore
-          const profileCourses = profile.courses || []
-          const profileInterests = profile.interests || []
-          const profileLearning = profile.learningStyle || profile.learning_style
-          const profileStudy = profile.studyPreference || profile.study_preference
-
-          const otherUserFormatted = {
-            user_id: profile.userId || profile.user_id,
-            courses: profileCourses,
-            interests: profileInterests,
-            major: profile.major || NOT_SPECIFIED,
-            year: profile.year || NOT_SPECIFIED,
-            learning_style: profileLearning || NOT_SPECIFIED,
-            study_preference: profileStudy || NOT_SPECIFIED,
-          }
+          // Convert profile to matching algorithm format
+          const otherUserFormatted = formatProfileForMatching(profile)
 
           // Use the matching algorithm to calculate score and completeness
           const matchResult = calculateMatchScore(currentUserFormatted, otherUserFormatted)
 
           return {
-            user_id: profile.userId || profile.user_id,
+            user_id: otherUserFormatted.user_id,
             full_name: profile.fullName || profile.full_name || 'Unknown',
-            major: profile.major || NOT_SPECIFIED,
-            year: profile.year || NOT_SPECIFIED,
+            major: otherUserFormatted.major,
+            year: otherUserFormatted.year,
             bio: profile.bio || '',
-            courses: profileCourses,
-            interests: profileInterests,
-            learning_style: profileLearning || NOT_SPECIFIED,
-            study_preference: profileStudy || NOT_SPECIFIED,
+            courses: otherUserFormatted.courses,
+            interests: otherUserFormatted.interests,
+            learning_style: otherUserFormatted.learning_style,
+            study_preference: otherUserFormatted.study_preference,
             match_score: matchResult.match_score,
             common_courses: matchResult.common_courses,
             common_interests: matchResult.common_interests,
