@@ -15,6 +15,23 @@ import { motion, AnimatePresence } from "framer-motion"
 import { toast } from "sonner"
 import { calculateProfileCompleteness, calculateMatchScore, NOT_SPECIFIED } from "@/lib/matching-algorithm"
 
+// API profile format (handles both camelCase and snake_case)
+interface ApiProfile {
+  userId?: string
+  user_id?: string
+  fullName?: string
+  full_name?: string
+  courses?: string[]
+  interests?: string[]
+  major?: string
+  year?: string
+  bio?: string
+  learningStyle?: string
+  learning_style?: string
+  studyPreference?: string
+  study_preference?: string
+}
+
 interface Match {
   user_id: string
   full_name: string
@@ -39,7 +56,7 @@ export default function MatchesPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [showMatchAnimation, setShowMatchAnimation] = useState(false)
-  const [userProfileCompleteness, setUserProfileCompleteness] = useState<number>(100)
+  const [userProfileCompleteness, setUserProfileCompleteness] = useState<number>(0)
   const { user } = useRequireAuth()
 
   useEffect(() => {
@@ -71,7 +88,7 @@ export default function MatchesPage() {
   }, [matches, currentIndex])
 
   // Helper function to convert API profile format to matching algorithm format
-  const formatProfileForMatching = (profile: any) => ({
+  const formatProfileForMatching = (profile: ApiProfile) => ({
     user_id: profile.userId || profile.user_id,
     courses: profile.courses || [],
     interests: profile.interests || [],
