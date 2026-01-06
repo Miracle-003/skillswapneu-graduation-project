@@ -1,11 +1,11 @@
 interface UserProfile {
   user_id: string
-  courses: string[]
-  interests: string[]
-  major: string
+  courses?: string[]
+  interests?: string[]
+  major?: string
   year?: string
-  learning_style: string
-  study_preference: string
+  learning_style?: string
+  study_preference?: string
 }
 
 interface MatchResult {
@@ -58,8 +58,8 @@ export function calculateProfileCompleteness(profile: UserProfile): number {
 }
 
 export function calculateMatchScore(currentUser: UserProfile, otherUser: UserProfile): MatchResult {
-  const commonCourses = otherUser.courses?.filter((course) => currentUser.courses?.includes(course)) || []
-  const commonInterests = otherUser.interests?.filter((interest) => currentUser.interests?.includes(interest)) || []
+  const commonCourses = (otherUser.courses || []).filter((course) => (currentUser.courses || []).includes(course))
+  const commonInterests = (otherUser.interests || []).filter((interest) => (currentUser.interests || []).includes(interest))
 
   let score = 0
   const reasons: string[] = []
