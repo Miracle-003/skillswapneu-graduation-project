@@ -87,9 +87,34 @@ export default function MatchesPage() {
     return () => window.removeEventListener("keydown", handleKeyPress)
   }, [matches, currentIndex])
 
+  // Helper function to safely extract user ID from any profile object
+  const extractUserId = (obj: any): string | undefined => {
+    if (!obj) return undefined
+    // Prefer userId (camelCase from Prisma Client), fallback to user_id (snake_case)
+    return obj.userId || obj.user_id
+  }
+
+  // Helper function to extract user ID from a connection object
+  // Connections have userId1/userId2 (from Prisma Client camelCase conversion)
+  const extractConnectionUserIds = (connection: any, currentUserId: string): string | undefined => {
+    if (!connection) return undefined
+    
+    // Prisma Client returns camelCase: userId1, userId2
+    const id1 = connection.userId1 || connection.user_id_1
+    const id2 = connection.userId2 || connection.user_id_2
+    
+    // Return the ID that's NOT the current user
+    if (id1 === currentUserId) return id2
+    if (id2 === currentUserId) return id1
+    
+    // If neither matches current user, something's wrong - log and skip
+    console.warn('[Matches Page] Connection does not involve current user:', { connection, currentUserId })
+    return undefined
+  }
+
   // Helper function to convert API profile format to matching algorithm format
   const formatProfileForMatching = (profile: ApiProfile) => ({
-    user_id: profile.userId || profile.user_id,
+    user_id: extractUserId(profile) || '',
     courses: profile.courses || [],
     interests: profile.interests || [],
     major: profile.major || NOT_SPECIFIED,
@@ -126,25 +151,60 @@ export default function MatchesPage() {
       let connectedIds: string[] = []
       try {
         const { data: existing } = await apiClient.get(`/connections/user/${user.id}?status=accepted`)
-        connectedIds = (existing?.connections || [])
-          .map((c: any) => {
-            const uid1 = c.userId1 || c.user_id_1
-            const uid2 = c.userId2 || c.user_id_2
-            return uid1 === user.id ? uid2 : uid1
+        const connections = existing?.connections || []
+        console.log(`[Matches Page] Raw connections response:`, connections.length > 0 ? connections[0] : 'no connections')
+        
+        connectedIds = connections
+          .map((c: any) => extractConnectionUserIds(c, user.id))
+          .filter((id): id is string => {
+            if (!id) {
+              console.warn('[Matches Page] Skipping invalid connection entry')
+              return false
+            }
+            return true
           })
-          .filter(Boolean) // Remove any undefined/null values
-        console.log(`[Matches Page] Found ${connectedIds.length} existing connections`)
+        
+        console.log(`[Matches Page] Found ${connectedIds.length} existing connections:`, connectedIds)
       } catch (connErr) {
-        console.warn("Could not load connections, continuing without filtering:", connErr)
+        console.warn("[Matches Page] Could not load connections, continuing without filtering:", connErr)
         // Continue without connection filtering - better to show all matches than none
       }
 
       const allProfiles = await profileService.getAll()
       console.log(`[Matches Page] Retrieved ${allProfiles.length} total profiles`)
 
-      const matchedProfiles = allProfiles
-        .filter(profile => (profile.userId || profile.user_id) !== user.id) // Don't match with yourself
-        .filter(profile => !connectedIds.includes(profile.userId || profile.user_id)) // Filter out connected users
+      // Filter and log each step
+      const profilesWithValidIds = allProfiles.filter(profile => {
+        const profileId = extractUserId(profile)
+        if (!profileId) {
+          console.warn('[Matches Page] Skipping profile with no user ID:', profile)
+          return false
+        }
+        return true
+      })
+      console.log(`[Matches Page] Profiles with valid IDs: ${profilesWithValidIds.length}`)
+
+      const profilesExcludingSelf = profilesWithValidIds.filter(profile => {
+        const profileId = extractUserId(profile)
+        const isSelf = profileId === user.id
+        if (isSelf) {
+          console.log(`[Matches Page] Filtering out self (${profileId})`)
+        }
+        return !isSelf
+      })
+      console.log(`[Matches Page] After removing self: ${profilesExcludingSelf.length}`)
+
+      const profilesExcludingConnections = profilesExcludingSelf.filter(profile => {
+        const profileId = extractUserId(profile)
+        const isConnected = connectedIds.includes(profileId!)
+        if (isConnected) {
+          console.log(`[Matches Page] Filtering out already connected user: ${profileId}`)
+        }
+        return !isConnected
+      })
+      console.log(`[Matches Page] After removing connected users: ${profilesExcludingConnections.length}`)
+
+      const matchedProfiles = profilesExcludingConnections
         .map((profile) => {
           // Convert profile to matching algorithm format
           const otherUserFormatted = formatProfileForMatching(profile)
