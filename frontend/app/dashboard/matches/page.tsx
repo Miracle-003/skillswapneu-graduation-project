@@ -66,6 +66,7 @@ export default function MatchesPage() {
   const [error, setError] = useState<string | null>(null)
   const [showMatchAnimation, setShowMatchAnimation] = useState(false)
   const [userProfileCompleteness, setUserProfileCompleteness] = useState<number>(0)
+  const [hasShownMatchToast, setHasShownMatchToast] = useState(false)
   const { user } = useRequireAuth()
 
   useEffect(() => {
@@ -258,10 +259,13 @@ export default function MatchesPage() {
           commonCourses: matchedProfiles[0].common_courses.length
         })
         
-        // Show success toast when matches are found
-        toast.success('🎉 You have a study partner!', {
-          description: `Found ${matchedProfiles.length} potential match${matchedProfiles.length > 1 ? 'es' : ''} for you!`
-        })
+        // Show success toast when matches are found (only once per session)
+        if (!hasShownMatchToast) {
+          toast.success('🎉 You have a study partner!', {
+            description: `Found ${matchedProfiles.length} potential match${matchedProfiles.length > 1 ? 'es' : ''} for you!`
+          })
+          setHasShownMatchToast(true)
+        }
       } else {
         // Enhanced logging for zero matches to help with debugging
         console.log(`[Matches Page] Zero matches found. Debugging info:`)
