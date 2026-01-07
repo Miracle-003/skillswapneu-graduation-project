@@ -54,6 +54,8 @@ interface Match {
   match_score: number
   common_courses: string[]
   common_interests: string[]
+  mutual_teaching_opportunities: string[]
+  mutual_learning_opportunities: string[]
   is_connected: boolean
   profile_completeness: number
 }
@@ -235,6 +237,8 @@ export default function MatchesPage() {
             match_score: matchResult.match_score,
             common_courses: matchResult.common_courses,
             common_interests: matchResult.common_interests,
+            mutual_teaching_opportunities: matchResult.mutual_teaching_opportunities,
+            mutual_learning_opportunities: matchResult.mutual_learning_opportunities,
             is_connected: false, // Already filtered out above
             profile_completeness: matchResult.profile_completeness,
           }
@@ -495,6 +499,46 @@ export default function MatchesPage() {
                             About
                           </h3>
                           <p className="text-muted-foreground">{currentMatch.bio}</p>
+                        </div>
+                      )}
+
+                      {/* Mutual Teaching Opportunities - You can teach them */}
+                      {currentMatch.mutual_teaching_opportunities && currentMatch.mutual_teaching_opportunities.length > 0 && (
+                        <div className="bg-green-50 border-2 border-green-200 rounded-lg p-4">
+                          <h3 className="font-semibold mb-3 flex items-center gap-2 text-green-800">
+                            <BookOpen className="w-4 h-4 text-green-600" />
+                            🎓 You Can Teach ({currentMatch.mutual_teaching_opportunities.length})
+                          </h3>
+                          <p className="text-sm text-green-700 mb-2">
+                            These are courses you're taking that they want to learn!
+                          </p>
+                          <div className="flex flex-wrap gap-2">
+                            {currentMatch.mutual_teaching_opportunities.map((course) => (
+                              <Badge key={course} className="bg-green-600 hover:bg-green-700 text-white">
+                                {course}
+                              </Badge>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Mutual Learning Opportunities - They can teach you */}
+                      {currentMatch.mutual_learning_opportunities && currentMatch.mutual_learning_opportunities.length > 0 && (
+                        <div className="bg-blue-50 border-2 border-blue-200 rounded-lg p-4">
+                          <h3 className="font-semibold mb-3 flex items-center gap-2 text-blue-800">
+                            <Sparkles className="w-4 h-4 text-blue-600" />
+                            📚 They Can Teach You ({currentMatch.mutual_learning_opportunities.length})
+                          </h3>
+                          <p className="text-sm text-blue-700 mb-2">
+                            These are courses they're taking that you want to learn!
+                          </p>
+                          <div className="flex flex-wrap gap-2">
+                            {currentMatch.mutual_learning_opportunities.map((course) => (
+                              <Badge key={course} className="bg-blue-600 hover:bg-blue-700 text-white">
+                                {course}
+                              </Badge>
+                            ))}
+                          </div>
                         </div>
                       )}
 
