@@ -258,7 +258,9 @@ export default function MatchesPage() {
           score: matchedProfiles[0].match_score,
           completeness: matchedProfiles[0].profile_completeness,
           commonInterests: matchedProfiles[0].common_interests.length,
-          commonCourses: matchedProfiles[0].common_courses.length
+          commonCourses: matchedProfiles[0].common_courses.length,
+          mutualTeaching: matchedProfiles[0].mutual_teaching_opportunities.length,
+          mutualLearning: matchedProfiles[0].mutual_learning_opportunities.length
         })
       }
 
@@ -278,8 +280,19 @@ export default function MatchesPage() {
 
     try {
       if (!user) throw new Error("Not authenticated")
+      
+      console.log(`[Matches Page] Creating connection:`, {
+        from: user.id,
+        to: match.user_id,
+        matchScore: match.match_score,
+        mutualTeaching: match.mutual_teaching_opportunities,
+        mutualLearning: match.mutual_learning_opportunities
+      })
+      
       await apiClient.post("/connections", { userId1: user.id, userId2: match.user_id, status: "accepted" })
 
+      console.log(`[Matches Page] Connection created successfully with ${match.full_name}`)
+      
       setShowMatchAnimation(true)
       setTimeout(() => {
         setShowMatchAnimation(false)
@@ -288,7 +301,7 @@ export default function MatchesPage() {
         toast.success(`Connected with ${match.full_name}!`)
       }, 2000)
     } catch (err: any) {
-      console.error("[v0] Error connecting:", err)
+      console.error("[Matches Page] Error connecting:", err)
       toast.error("Failed to connect. Please try again.")
     }
   }
