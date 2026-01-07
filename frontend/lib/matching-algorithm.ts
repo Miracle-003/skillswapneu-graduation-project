@@ -61,18 +61,34 @@ export function calculateProfileCompleteness(profile: UserProfile): number {
 }
 
 export function calculateMatchScore(currentUser: UserProfile, otherUser: UserProfile): MatchResult {
-  const commonCourses = (otherUser.courses || []).filter((course) => (currentUser.courses || []).includes(course))
-  const commonInterests = (otherUser.interests || []).filter((interest) => (currentUser.interests || []).includes(interest))
+  // Create lowercase versions for case-insensitive comparison
+  // This ensures 'BNS101', 'bns101', and 'BnS101' are treated as the same course/interest
+  const currentUserCoursesLower = (currentUser.courses || []).map(c => c.toLowerCase())
+  const currentUserInterestsLower = (currentUser.interests || []).map(i => i.toLowerCase())
+  const otherUserCoursesLower = (otherUser.courses || []).map(c => c.toLowerCase())
+  const otherUserInterestsLower = (otherUser.interests || []).map(i => i.toLowerCase())
+
+  // Find common courses using case-insensitive comparison, but preserve original casing for display
+  const commonCourses = (otherUser.courses || []).filter((course) => 
+    currentUserCoursesLower.includes(course.toLowerCase())
+  )
+  
+  // Find common interests using case-insensitive comparison, but preserve original casing for display
+  const commonInterests = (otherUser.interests || []).filter((interest) => 
+    currentUserInterestsLower.includes(interest.toLowerCase())
+  )
 
   // MUTUAL MATCHING: Check if one user's interests match another user's courses
   // Current user can TEACH (their courses) what other user wants to LEARN (their interests)
+  // Use case-insensitive comparison to match course names regardless of capitalization
   const mutualTeachingOpportunities = (currentUser.courses || []).filter((course) => 
-    (otherUser.interests || []).includes(course)
+    otherUserInterestsLower.includes(course.toLowerCase())
   )
   
   // Current user wants to LEARN (their interests) what other user can TEACH (their courses)
+  // Use case-insensitive comparison to match course names regardless of capitalization
   const mutualLearningOpportunities = (currentUser.interests || []).filter((interest) => 
-    (otherUser.courses || []).includes(interest)
+    otherUserCoursesLower.includes(interest.toLowerCase())
   )
 
   let score = 0
