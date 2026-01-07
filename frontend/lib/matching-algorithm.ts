@@ -13,6 +13,8 @@ interface MatchResult {
   match_score: number
   common_courses: string[]
   common_interests: string[]
+  mutual_teaching_opportunities: string[]  // Current user can teach (courses) → other wants to learn (interests)
+  mutual_learning_opportunities: string[]  // Current user wants to learn (interests) → other can teach (courses)
   reasons: string[]
   profile_completeness: number
 }
@@ -34,6 +36,7 @@ const PROFILE_COMPLETENESS_WEIGHTS = {
 const MATCH_SCORE_WEIGHTS = {
   interest: 40,           // Per shared interest
   course: 20,             // Per common course
+  mutual_match: 50,       // Per mutual teaching/learning opportunity (HIGH PRIORITY)
   same_major: 10,
   has_major: 5,           // Base score for having a major
   same_year: 5,
@@ -61,21 +64,58 @@ export function calculateMatchScore(currentUser: UserProfile, otherUser: UserPro
   const commonCourses = (otherUser.courses || []).filter((course) => (currentUser.courses || []).includes(course))
   const commonInterests = (otherUser.interests || []).filter((interest) => (currentUser.interests || []).includes(interest))
 
+  // MUTUAL MATCHING: Check if one user's interests match another user's courses
+  // Current user can TEACH (their courses) what other user wants to LEARN (their interests)
+  const mutualTeachingOpportunities = (currentUser.courses || []).filter((course) => 
+    (otherUser.interests || []).includes(course)
+  )
+  
+  // Current user wants to LEARN (their interests) what other user can TEACH (their courses)
+  const mutualLearningOpportunities = (currentUser.interests || []).filter((interest) => 
+    (otherUser.courses || []).includes(interest)
+  )
+
   let score = 0
   const reasons: string[] = []
 
-  // Interest overlap (PRIMARY FACTOR)
+  // Log mutual matching for debugging
+  console.log(`[Matching Algorithm] Calculating score for ${currentUser.user_id} → ${otherUser.user_id}`)
+  console.log(`  - Current user courses: [${(currentUser.courses || []).join(', ')}]`)
+  console.log(`  - Current user interests: [${(currentUser.interests || []).join(', ')}]`)
+  console.log(`  - Other user courses: [${(otherUser.courses || []).join(', ')}]`)
+  console.log(`  - Other user interests: [${(otherUser.interests || []).join(', ')}]`)
+  console.log(`  - Mutual teaching opportunities: [${mutualTeachingOpportunities.join(', ')}]`)
+  console.log(`  - Mutual learning opportunities: [${mutualLearningOpportunities.join(', ')}]`)
+
+  // MUTUAL TEACHING/LEARNING (HIGHEST PRIORITY)
+  if (mutualTeachingOpportunities.length > 0) {
+    const mutualTeachingPoints = mutualTeachingOpportunities.length * MATCH_SCORE_WEIGHTS.mutual_match
+    score += mutualTeachingPoints
+    reasons.push(`You can teach ${mutualTeachingOpportunities.length} course${mutualTeachingOpportunities.length > 1 ? "s" : ""} they want to learn`)
+    console.log(`  → Added ${mutualTeachingPoints} points for teaching opportunities`)
+  }
+
+  if (mutualLearningOpportunities.length > 0) {
+    const mutualLearningPoints = mutualLearningOpportunities.length * MATCH_SCORE_WEIGHTS.mutual_match
+    score += mutualLearningPoints
+    reasons.push(`They can teach ${mutualLearningOpportunities.length} course${mutualLearningOpportunities.length > 1 ? "s" : ""} you want to learn`)
+    console.log(`  → Added ${mutualLearningPoints} points for learning opportunities`)
+  }
+
+  // Interest overlap (shared interests)
   if (commonInterests.length > 0) {
     const interestPoints = commonInterests.length * MATCH_SCORE_WEIGHTS.interest
     score += interestPoints
     reasons.push(`${commonInterests.length} shared interest${commonInterests.length > 1 ? "s" : ""}`)
+    console.log(`  → Added ${interestPoints} points for shared interests`)
   }
 
-  // Course overlap
+  // Course overlap (studying same courses)
   if (commonCourses.length > 0) {
     const coursePoints = commonCourses.length * MATCH_SCORE_WEIGHTS.course
     score += coursePoints
     reasons.push(`${commonCourses.length} common course${commonCourses.length > 1 ? "s" : ""}`)
+    console.log(`  → Added ${coursePoints} points for common courses`)
   }
 
   // Same major
@@ -128,11 +168,16 @@ export function calculateMatchScore(currentUser: UserProfile, otherUser: UserPro
   // Cap at 100
   score = Math.min(score, 100)
 
+  console.log(`  → Final score: ${score}`)
+  console.log(`  → Reasons: ${reasons.join(', ')}`)
+
   return {
     user_id: otherUser.user_id,
     match_score: score,
     common_courses: commonCourses,
     common_interests: commonInterests,
+    mutual_teaching_opportunities: mutualTeachingOpportunities,
+    mutual_learning_opportunities: mutualLearningOpportunities,
     reasons,
     profile_completeness: profileCompleteness,
   }
