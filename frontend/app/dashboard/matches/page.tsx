@@ -66,6 +66,7 @@ export default function MatchesPage() {
   const [error, setError] = useState<string | null>(null)
   const [showMatchAnimation, setShowMatchAnimation] = useState(false)
   const [userProfileCompleteness, setUserProfileCompleteness] = useState<number>(0)
+  const [hasShownMatchToast, setHasShownMatchToast] = useState(false)
   const { user } = useRequireAuth()
 
   useEffect(() => {
@@ -248,6 +249,7 @@ export default function MatchesPage() {
         })
 
       console.log(`[Matches Page] Found ${matchedProfiles.length} potential matches`)
+      
       if (matchedProfiles.length > 0) {
         console.log(`[Matches Page] Top match:`, {
           name: matchedProfiles[0].full_name,
@@ -256,6 +258,35 @@ export default function MatchesPage() {
           commonInterests: matchedProfiles[0].common_interests.length,
           commonCourses: matchedProfiles[0].common_courses.length
         })
+        
+        // Show success toast when matches are found (only once per session)
+        if (!hasShownMatchToast) {
+          toast.success('🎉 You have a study partner!', {
+            description: `Found ${matchedProfiles.length} potential match${matchedProfiles.length > 1 ? 'es' : ''} for you!`
+          })
+          setHasShownMatchToast(true)
+        }
+      } else {
+        // Enhanced logging for zero matches to help with debugging
+        console.log(`[Matches Page] Zero matches found. Debugging info:`)
+        console.log(`  - Current user profile completeness: ${currentUserCompleteness}%`)
+        console.log(`  - Current user courses: ${currentProfile.courses?.length || 0}`)
+        console.log(`  - Current user interests: ${currentProfile.interests?.length || 0}`)
+        console.log(`  - Total profiles checked: ${profilesExcludingConnections.length}`)
+        console.log(`  - Profiles filtered (self + connected): ${allProfiles.length - profilesExcludingConnections.length}`)
+        
+        if (currentUserCompleteness < 80) {
+          console.log(`  - REASON: Your profile is only ${currentUserCompleteness}% complete. Add courses and interests for better matches.`)
+        }
+        if (!currentProfile.courses || currentProfile.courses.length === 0) {
+          console.log(`  - REASON: You have no courses added. Add courses to find study partners.`)
+        }
+        if (!currentProfile.interests || currentProfile.interests.length === 0) {
+          console.log(`  - REASON: You have no interests added. Add interests to find compatible study partners.`)
+        }
+        if (profilesExcludingConnections.length === 0) {
+          console.log(`  - REASON: No other users available (all are already connected or it's only you).`)
+        }
       }
 
       setMatches(matchedProfiles)
