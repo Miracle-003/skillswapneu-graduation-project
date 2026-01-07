@@ -32,6 +32,15 @@ interface ApiProfile {
   study_preference?: string
 }
 
+// Connection format from backend (Prisma Client returns camelCase)
+interface ApiConnection {
+  userId1?: string
+  user_id_1?: string
+  userId2?: string
+  user_id_2?: string
+  status?: string
+}
+
 interface Match {
   user_id: string
   full_name: string
@@ -88,7 +97,7 @@ export default function MatchesPage() {
   }, [matches, currentIndex])
 
   // Helper function to safely extract user ID from any profile object
-  const extractUserId = (obj: any): string | undefined => {
+  const extractUserId = (obj: ApiProfile | null | undefined): string | undefined => {
     if (!obj) return undefined
     // Prefer userId (camelCase from Prisma Client), fallback to user_id (snake_case)
     return obj.userId || obj.user_id
@@ -96,7 +105,7 @@ export default function MatchesPage() {
 
   // Helper function to extract user ID from a connection object
   // Connections have userId1/userId2 (from Prisma Client camelCase conversion)
-  const extractConnectionUserIds = (connection: any, currentUserId: string): string | undefined => {
+  const extractConnectionUserIds = (connection: ApiConnection | null | undefined, currentUserId: string): string | undefined => {
     if (!connection) return undefined
     
     // Prisma Client returns camelCase: userId1, userId2
@@ -155,7 +164,7 @@ export default function MatchesPage() {
         console.log(`[Matches Page] Raw connections response:`, connections.length > 0 ? connections[0] : 'no connections')
         
         connectedIds = connections
-          .map((c: any) => extractConnectionUserIds(c, user.id))
+          .map((c: ApiConnection) => extractConnectionUserIds(c, user.id))
           .filter((id): id is string => {
             if (!id) {
               console.warn('[Matches Page] Skipping invalid connection entry')
@@ -196,7 +205,8 @@ export default function MatchesPage() {
 
       const profilesExcludingConnections = profilesExcludingSelf.filter(profile => {
         const profileId = extractUserId(profile)
-        const isConnected = connectedIds.includes(profileId!)
+        // profileId should always be defined at this point due to previous filtering
+        const isConnected = profileId ? connectedIds.includes(profileId) : false
         if (isConnected) {
           console.log(`[Matches Page] Filtering out already connected user: ${profileId}`)
         }
