@@ -1,6 +1,7 @@
 import express from "express"
 import { prisma } from "../lib/prisma.js"
 import { requireAuth } from "../middleware/requireAuth.js"
+import { regenerateMatchesForUser } from "../lib/matchingService.js"
 
 const router = express.Router()
 
@@ -79,6 +80,16 @@ router.post("/", async (req, res) => {
       update: data,
       create: { userId, ...data },
     })
+
+    // Regenerate match suggestions for this user after profile update
+    // This ensures the matches table always reflects current suggestions
+    try {
+      await regenerateMatchesForUser(userId)
+      console.log(`[Profile Route] Match suggestions regenerated for user: ${userId}`)
+    } catch (matchError) {
+      // Log but don't fail the profile update if match regeneration fails
+      console.error(`[Profile Route] Failed to regenerate matches for user ${userId}:`, matchError)
+    }
 
     res.json(profile)
   } catch (error) {

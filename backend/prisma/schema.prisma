@@ -105,9 +105,11 @@ model Match {
   userId1            String   @map("user_id_1") @db.Uuid
   userId2            String   @map("user_id_2") @db.Uuid
   compatibilityScore Float    @map("compatibility_score")
-  status             String   @default("pending")
+  status             String   @default("suggestion")
   createdAt          DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
 
+  @@index([userId1, status])
+  @@index([userId2, status])
   @@map("matches")
 }
 

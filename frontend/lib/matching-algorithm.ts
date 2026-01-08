@@ -1,7 +1,22 @@
+/**
+ * Matching Algorithm for SkillSwap NEU
+ * 
+ * Updated to meet new requirements:
+ * 1. A match is defined as: any user whose interests include a course offered by another user
+ * 2. Match suggestions are automatically generated and stored in the matches table
+ * 3. Connections are only created when two users mutually accept a match
+ * 4. The algorithm handles array/string mismatches due to serialization
+ * 
+ * This algorithm is used on the "Find Your Partner" page to calculate match scores
+ * and display match suggestions to users.
+ */
+
+import { ensureArray } from './utils/array-helpers'
+
 interface UserProfile {
   user_id: string
-  courses?: string[]
-  interests?: string[]
+  courses?: string[] | string
+  interests?: string[] | string
   major?: string
   year?: string
   learning_style?: string
@@ -50,8 +65,11 @@ const MATCH_SCORE_WEIGHTS = {
 export function calculateProfileCompleteness(profile: UserProfile): number {
   let completeness = 0
 
-  if (profile.courses && profile.courses.length > 0) completeness += PROFILE_COMPLETENESS_WEIGHTS.courses
-  if (profile.interests && profile.interests.length > 0) completeness += PROFILE_COMPLETENESS_WEIGHTS.interests
+  const courses = ensureArray(profile.courses)
+  const interests = ensureArray(profile.interests)
+
+  if (courses.length > 0) completeness += PROFILE_COMPLETENESS_WEIGHTS.courses
+  if (interests.length > 0) completeness += PROFILE_COMPLETENESS_WEIGHTS.interests
   if (profile.major && profile.major !== NOT_SPECIFIED) completeness += PROFILE_COMPLETENESS_WEIGHTS.major
   if (profile.year && profile.year !== NOT_SPECIFIED) completeness += PROFILE_COMPLETENESS_WEIGHTS.year
   if (profile.learning_style && profile.learning_style !== NOT_SPECIFIED) completeness += PROFILE_COMPLETENESS_WEIGHTS.learning_style
@@ -60,34 +78,48 @@ export function calculateProfileCompleteness(profile: UserProfile): number {
   return completeness
 }
 
+/**
+ * Calculate match score between two users
+ * 
+ * Updated algorithm:
+ * - A match exists if any user's interests include a course offered by another user
+ * - Properly handles array/string serialization issues
+ * - Case-insensitive comparison for courses and interests
+ */
 export function calculateMatchScore(currentUser: UserProfile, otherUser: UserProfile): MatchResult {
+  // Ensure courses and interests are arrays, handling serialization issues
+  const currentUserCourses = ensureArray(currentUser.courses)
+  const currentUserInterests = ensureArray(currentUser.interests)
+  const otherUserCourses = ensureArray(otherUser.courses)
+  const otherUserInterests = ensureArray(otherUser.interests)
+
   // Create lowercase Sets for case-insensitive comparison with O(1) lookup performance
   // This ensures 'BNS101', 'bns101', and 'BnS101' are treated as the same course/interest
-  const currentUserCoursesLower = new Set((currentUser.courses || []).map(c => c.toLowerCase()))
-  const currentUserInterestsLower = new Set((currentUser.interests || []).map(i => i.toLowerCase()))
-  const otherUserCoursesLower = new Set((otherUser.courses || []).map(c => c.toLowerCase()))
-  const otherUserInterestsLower = new Set((otherUser.interests || []).map(i => i.toLowerCase()))
+  const currentUserCoursesLower = new Set(currentUserCourses.map(c => c.toLowerCase()))
+  const currentUserInterestsLower = new Set(currentUserInterests.map(i => i.toLowerCase()))
+  const otherUserCoursesLower = new Set(otherUserCourses.map(c => c.toLowerCase()))
+  const otherUserInterestsLower = new Set(otherUserInterests.map(i => i.toLowerCase()))
 
   // Find common courses using case-insensitive comparison, but preserve original casing for display
-  const commonCourses = (otherUser.courses || []).filter((course) => 
+  const commonCourses = otherUserCourses.filter((course) => 
     currentUserCoursesLower.has(course.toLowerCase())
   )
   
   // Find common interests using case-insensitive comparison, but preserve original casing for display
-  const commonInterests = (otherUser.interests || []).filter((interest) => 
+  const commonInterests = otherUserInterests.filter((interest) => 
     currentUserInterestsLower.has(interest.toLowerCase())
   )
 
   // MUTUAL MATCHING: Check if one user's interests match another user's courses
   // Current user can TEACH (their courses) what other user wants to LEARN (their interests)
   // Use case-insensitive comparison to match course names regardless of capitalization
-  const mutualTeachingOpportunities = (currentUser.courses || []).filter((course) => 
+  const mutualTeachingOpportunities = currentUserCourses.filter((course) => 
     otherUserInterestsLower.has(course.toLowerCase())
   )
   
   // Current user wants to LEARN (their interests) what other user can TEACH (their courses)
   // Use case-insensitive comparison to match course names regardless of capitalization
-  const mutualLearningOpportunities = (currentUser.interests || []).filter((interest) => 
+  const mutualLearningOpportunities = currentUserInterests.filter((interest) => 
     otherUserCoursesLower.has(interest.toLowerCase())
   )
 
@@ -96,10 +128,10 @@ export function calculateMatchScore(currentUser: UserProfile, otherUser: UserPro
 
   // Log mutual matching for debugging
   console.log(`[Matching Algorithm] Calculating score for ${currentUser.user_id} → ${otherUser.user_id}`)
-  console.log(`  - Current user courses: [${(currentUser.courses || []).join(', ')}]`)
-  console.log(`  - Current user interests: [${(currentUser.interests || []).join(', ')}]`)
-  console.log(`  - Other user courses: [${(otherUser.courses || []).join(', ')}]`)
-  console.log(`  - Other user interests: [${(otherUser.interests || []).join(', ')}]`)
+  console.log(`  - Current user courses: [${currentUserCourses.join(', ')}]`)
+  console.log(`  - Current user interests: [${currentUserInterests.join(', ')}]`)
+  console.log(`  - Other user courses: [${otherUserCourses.join(', ')}]`)
+  console.log(`  - Other user interests: [${otherUserInterests.join(', ')}]`)
   console.log(`  - Mutual teaching opportunities: [${mutualTeachingOpportunities.join(', ')}]`)
   console.log(`  - Mutual learning opportunities: [${mutualLearningOpportunities.join(', ')}]`)
 
@@ -199,6 +231,10 @@ export function calculateMatchScore(currentUser: UserProfile, otherUser: UserPro
   }
 }
 
+/**
+ * Rank potential matches by score and completeness
+ * Returns all matches, sorted by score (not filtered by minimum score)
+ */
 export function rankMatches(currentUser: UserProfile, potentialMatches: UserProfile[]): MatchResult[] {
   // Calculate scores for all matches, don't filter out zero scores
   const rankedMatches = potentialMatches
