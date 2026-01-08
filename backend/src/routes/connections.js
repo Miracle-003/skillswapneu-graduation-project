@@ -5,7 +5,11 @@ import { requireAuth } from "../middleware/requireAuth.js"
 const router = express.Router()
 router.use(requireAuth)
 
-// List connections for a user (accepted or pending)
+/**
+ * List connections for a user (accepted or pending)
+ * Connections represent mutual acceptance, similar to Facebook's 'friends'
+ * Match suggestions are stored separately in the matches table
+ */
 router.get("/user/:userId", async (req, res) => {
   try {
     const { userId } = req.params
@@ -25,7 +29,11 @@ router.get("/user/:userId", async (req, res) => {
   }
 })
 
-// Create connection
+/**
+ * Create connection (accept a match)
+ * This is called when a user accepts a match suggestion
+ * A connection represents mutual acceptance between two users
+ */
 router.post("/", async (req, res) => {
   try {
     const me = req.user.id
@@ -34,14 +42,60 @@ router.post("/", async (req, res) => {
       return res.status(403).json({ error: "Forbidden: userId1 must match the authenticated user" })
     }
     if (!userId2) return res.status(400).json({ error: "userId2 is required" })
+    
+    // Check if connection already exists
+    const existing = await prisma.connection.findFirst({
+      where: {
+        OR: [
+          { userId1: me, userId2 },
+          { userId1: userId2, userId2: me },
+        ],
+      },
+    })
+
+    if (existing) {
+      // If connection already exists, update its status
+      const updated = await prisma.connection.update({
+        where: { id: existing.id },
+        data: { status },
+      })
+      return res.json(updated)
+    }
+
+    // Create new connection
     const conn = await prisma.connection.create({ data: { userId1: me, userId2, status } })
+    
+    // Update match status if it exists
+    try {
+      const match = await prisma.match.findFirst({
+        where: {
+          OR: [
+            { userId1: me, userId2 },
+            { userId1: userId2, userId2: me },
+          ],
+        },
+      })
+      if (match) {
+        await prisma.match.update({
+          where: { id: match.id },
+          data: { status: status === "accepted" ? "connected" : "pending_connection" },
+        })
+      }
+    } catch (matchErr) {
+      console.warn("[Connection Route] Failed to update match status:", matchErr)
+      // Don't fail the connection creation if match update fails
+    }
+
     res.status(201).json(conn)
   } catch (error) {
     res.status(400).json({ error: error.message })
   }
 })
 
-// Update connection status
+/**
+ * Update connection status
+ * Use this to accept/reject a connection request
+ */
 router.patch("/:id", async (req, res) => {
   try {
     const { id } = req.params
@@ -55,13 +109,37 @@ router.patch("/:id", async (req, res) => {
       return res.status(403).json({ error: "Forbidden: cannot update another user's connection" })
     }
     const updated = await prisma.connection.update({ where: { id }, data: { status } })
+    
+    // Update corresponding match status
+    try {
+      const match = await prisma.match.findFirst({
+        where: {
+          OR: [
+            { userId1: existing.userId1, userId2: existing.userId2 },
+            { userId1: existing.userId2, userId2: existing.userId1 },
+          ],
+        },
+      })
+      if (match) {
+        await prisma.match.update({
+          where: { id: match.id },
+          data: { status: status === "accepted" ? "connected" : status },
+        })
+      }
+    } catch (matchErr) {
+      console.warn("[Connection Route] Failed to update match status:", matchErr)
+    }
+    
     res.json(updated)
   } catch (error) {
     res.status(400).json({ error: error.message })
   }
 })
 
-// Delete connection
+/**
+ * Delete connection
+ * This removes a connection between two users
+ */
 router.delete("/:id", async (req, res) => {
   try {
     const { id } = req.params
@@ -72,6 +150,27 @@ router.delete("/:id", async (req, res) => {
       return res.status(403).json({ error: "Forbidden: cannot delete another user's connection" })
     }
     await prisma.connection.delete({ where: { id } })
+    
+    // Revert match status back to suggestion
+    try {
+      const match = await prisma.match.findFirst({
+        where: {
+          OR: [
+            { userId1: existing.userId1, userId2: existing.userId2 },
+            { userId1: existing.userId2, userId2: existing.userId1 },
+          ],
+        },
+      })
+      if (match) {
+        await prisma.match.update({
+          where: { id: match.id },
+          data: { status: "suggestion" },
+        })
+      }
+    } catch (matchErr) {
+      console.warn("[Connection Route] Failed to update match status:", matchErr)
+    }
+    
     res.status(204).send()
   } catch (error) {
     res.status(400).json({ error: error.message })
