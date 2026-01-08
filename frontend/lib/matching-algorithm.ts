@@ -1,6 +1,13 @@
-import { ensureArray } from "./utils/array-helpers"
+"use client"
 
-export const NOT_SPECIFIED = "Not specified"
+import { useEffect, useState } from "react"
+import Link from "next/link"
+
+/* ============================
+   TYPES
+============================ */
+
+const NOT_SPECIFIED = "Not specified"
 
 interface UserProfile {
   user_id: string
@@ -12,152 +19,184 @@ interface UserProfile {
   study_preference?: string
 }
 
-export interface MatchResult {
+interface MatchResult {
   user_id: string
   match_score: number
-  common_courses: string[]
-  common_interests: string[]
   mutual_teaching_opportunities: string[]
   mutual_learning_opportunities: string[]
   reasons: string[]
   profile_completeness: number
 }
 
-const PROFILE_COMPLETENESS_WEIGHTS = {
+/* ============================
+   HELPERS
+============================ */
+
+function ensureArray(value?: string[] | string): string[] {
+  if (!value) return []
+  if (Array.isArray(value)) return value
+  if (typeof value === "string") {
+    try {
+      const parsed = JSON.parse(value)
+      return Array.isArray(parsed) ? parsed : [value]
+    } catch {
+      return [value]
+    }
+  }
+  return []
+}
+
+/* ============================
+   SCORING
+============================ */
+
+const PROFILE_COMPLETENESS = {
   courses: 25,
   interests: 25,
   major: 20,
   year: 10,
   learning_style: 10,
   study_preference: 10,
-} as const
+}
 
-const MATCH_SCORE_WEIGHTS = {
-  interest: 40,
-  course: 20,
-  mutual_match: 50,
-  same_major: 10,
-  has_major: 5,
-  same_year: 5,
-  learning_style: 5,
-  study_preference: 5,
-  complete_profile: 10,
-  partial_profile: 5,
-} as const
+const MATCH_POINTS = {
+  mutual: 50,
+  complete: 10,
+  partial: 5,
+}
 
-export function calculateProfileCompleteness(profile: UserProfile): number {
+/* ============================
+   CORE MATCHING LOGIC
+============================ */
+
+function profileCompleteness(user: UserProfile): number {
   let score = 0
 
-  if (ensureArray(profile.courses).length > 0) score += PROFILE_COMPLETENESS_WEIGHTS.courses
-  if (ensureArray(profile.interests).length > 0) score += PROFILE_COMPLETENESS_WEIGHTS.interests
-  if (profile.major && profile.major !== NOT_SPECIFIED) score += PROFILE_COMPLETENESS_WEIGHTS.major
-  if (profile.year && profile.year !== NOT_SPECIFIED) score += PROFILE_COMPLETENESS_WEIGHTS.year
-  if (profile.learning_style && profile.learning_style !== NOT_SPECIFIED)
-    score += PROFILE_COMPLETENESS_WEIGHTS.learning_style
-  if (profile.study_preference && profile.study_preference !== NOT_SPECIFIED)
-    score += PROFILE_COMPLETENESS_WEIGHTS.study_preference
+  if (ensureArray(user.courses).length) score += PROFILE_COMPLETENESS.courses
+  if (ensureArray(user.interests).length) score += PROFILE_COMPLETENESS.interests
+  if (user.major && user.major !== NOT_SPECIFIED) score += PROFILE_COMPLETENESS.major
+  if (user.year && user.year !== NOT_SPECIFIED) score += PROFILE_COMPLETENESS.year
+  if (user.learning_style && user.learning_style !== NOT_SPECIFIED)
+    score += PROFILE_COMPLETENESS.learning_style
+  if (user.study_preference && user.study_preference !== NOT_SPECIFIED)
+    score += PROFILE_COMPLETENESS.study_preference
 
   return score
 }
 
-export function calculateMatchScore(
-  currentUser: UserProfile,
-  otherUser: UserProfile
+function calculateMatch(
+  current: UserProfile,
+  other: UserProfile
 ): MatchResult {
-  const currentCourses = ensureArray(currentUser.courses)
-  const currentInterests = ensureArray(currentUser.interests)
-  const otherCourses = ensureArray(otherUser.courses)
-  const otherInterests = ensureArray(otherUser.interests)
+  const currentCourses = ensureArray(current.courses)
+  const currentInterests = ensureArray(current.interests)
+  const otherCourses = ensureArray(other.courses)
+  const otherInterests = ensureArray(other.interests)
 
-  const currentCoursesLower = new Set(currentCourses.map(c => c.toLowerCase()))
-  const currentInterestsLower = new Set(currentInterests.map(i => i.toLowerCase()))
-  const otherCoursesLower = new Set(otherCourses.map(c => c.toLowerCase()))
-  const otherInterestsLower = new Set(otherInterests.map(i => i.toLowerCase()))
+  const otherInterestsSet = new Set(otherInterests.map(i => i.toLowerCase()))
+  const otherCoursesSet = new Set(otherCourses.map(c => c.toLowerCase()))
 
-  const commonCourses = otherCourses.filter(c =>
-    currentCoursesLower.has(c.toLowerCase())
+  const teaching = currentCourses.filter(c =>
+    otherInterestsSet.has(c.toLowerCase())
   )
 
-  const commonInterests = otherInterests.filter(i =>
-    currentInterestsLower.has(i.toLowerCase())
+  const learning = currentInterests.filter(i =>
+    otherCoursesSet.has(i.toLowerCase())
   )
 
-  const mutualTeachingOpportunities = currentCourses.filter(c =>
-    otherInterestsLower.has(c.toLowerCase())
-  )
-
-  const mutualLearningOpportunities = currentInterests.filter(i =>
-    otherCoursesLower.has(i.toLowerCase())
-  )
-
-  let score = 0
-  const reasons: string[] = []
-
-  if (
-    mutualTeachingOpportunities.length === 0 &&
-    mutualLearningOpportunities.length === 0
-  ) {
-    // ❗ REQUIRED MATCH DEFINITION
+  // 🚫 NO MUTUAL MATCH → NO MATCH (FIXES 0%)
+  if (teaching.length === 0 && learning.length === 0) {
     return {
-      user_id: otherUser.user_id,
+      user_id: other.user_id,
       match_score: 0,
-      common_courses: [],
-      common_interests: [],
       mutual_teaching_opportunities: [],
       mutual_learning_opportunities: [],
       reasons: [],
-      profile_completeness: calculateProfileCompleteness(otherUser),
+      profile_completeness: profileCompleteness(other),
     }
   }
 
-  score += mutualTeachingOpportunities.length * MATCH_SCORE_WEIGHTS.mutual_match
-  score += mutualLearningOpportunities.length * MATCH_SCORE_WEIGHTS.mutual_match
+  let score = (teaching.length + learning.length) * MATCH_POINTS.mutual
+  const reasons: string[] = []
 
-  if (mutualTeachingOpportunities.length > 0)
-    reasons.push("You can teach them a course they want")
+  if (teaching.length) reasons.push("You can teach them a course they want")
+  if (learning.length) reasons.push("They can teach you a course you want")
 
-  if (mutualLearningOpportunities.length > 0)
-    reasons.push("They can teach you a course you want")
+  const completeness = profileCompleteness(other)
 
-  score += commonInterests.length * MATCH_SCORE_WEIGHTS.interest
-  score += commonCourses.length * MATCH_SCORE_WEIGHTS.course
-
-  if (commonInterests.length > 0) reasons.push("Shared interests")
-  if (commonCourses.length > 0) reasons.push("Common courses")
-
-  if (
-    currentUser.major &&
-    otherUser.major &&
-    currentUser.major === otherUser.major &&
-    currentUser.major !== NOT_SPECIFIED
-  ) {
-    score += MATCH_SCORE_WEIGHTS.same_major
-    reasons.push("Same major")
-  }
-
-  const completeness = calculateProfileCompleteness(otherUser)
-
-  if (completeness >= 80) score += MATCH_SCORE_WEIGHTS.complete_profile
-  else if (completeness >= 50) score += MATCH_SCORE_WEIGHTS.partial_profile
+  if (completeness >= 80) score += MATCH_POINTS.complete
+  else if (completeness >= 50) score += MATCH_POINTS.partial
 
   return {
-    user_id: otherUser.user_id,
+    user_id: other.user_id,
     match_score: Math.min(score, 100),
-    common_courses: commonCourses,
-    common_interests: commonInterests,
-    mutual_teaching_opportunities: mutualTeachingOpportunities,
-    mutual_learning_opportunities: mutualLearningOpportunities,
+    mutual_teaching_opportunities: teaching,
+    mutual_learning_opportunities: learning,
     reasons,
     profile_completeness: completeness,
   }
 }
 
-export function rankMatches(
-  currentUser: UserProfile,
-  potentialMatches: UserProfile[]
-): MatchResult[] {
-  return potentialMatches
-    .map(user => calculateMatchScore(currentUser, user))
-    .filter(match => match.match_score > 0)
-    .sort((a, b) => b.match_score - a.match_score)
+/* ============================
+   PAGE
+============================ */
+
+export default function MatchesPage() {
+  const [matches, setMatches] = useState<MatchResult[]>([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    // 🔁 REPLACE with NeonDB fetch
+    const currentUser: UserProfile = {
+      user_id: "me",
+      courses: ["CS101"],
+      interests: ["MATH201"],
+    }
+
+    const users: UserProfile[] = [
+      {
+        user_id: "u1",
+        courses: ["MATH201"],
+        interests: ["CS101"],
+        major: "CS",
+      },
+    ]
+
+    const results = users
+      .map(u => calculateMatch(currentUser, u))
+      .filter(m => m.match_score > 0)
+
+    setMatches(results)
+    setLoading(false)
+  }, [])
+
+  return (
+    <div className="min-h-screen p-6 bg-background">
+      <div className="max-w-3xl mx-auto space-y-6">
+        <Link href="/dashboard">← Back</Link>
+
+        <h1 className="text-2xl font-bold">Your Matches</h1>
+
+        {loading && <p>Loading…</p>}
+
+        {!loading && matches.length === 0 && (
+          <p>No matches yet.</p>
+        )}
+
+        {!loading &&
+          matches.map(m => (
+            <div key={m.user_id} className="border p-4 rounded">
+              <p className="font-semibold">
+                Match Score: {m.match_score}%
+              </p>
+              <ul className="list-disc ml-5 text-sm">
+                {m.reasons.map((r, i) => (
+                  <li key={i}>{r}</li>
+                ))}
+              </ul>
+            </div>
+          ))}
+      </div>
+    </div>
+  )
 }
