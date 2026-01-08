@@ -85,4 +85,170 @@ export function calculateProfileCompleteness(profile: UserProfile): number {
   const normalized = normalizeProfile(profile)
 
   let completeness = 0
-  const courses
+  const courses = ensureArray(normalized.courses)
+  const interests = ensureArray(normalized.interests)
+
+  if (courses.length > 0) completeness += PROFILE_COMPLETENESS_WEIGHTS.courses
+  if (interests.length > 0) completeness += PROFILE_COMPLETENESS_WEIGHTS.interests
+  if (normalized.major && normalized.major !== NOT_SPECIFIED)
+    completeness += PROFILE_COMPLETENESS_WEIGHTS.major
+  if (normalized.year && normalized.year !== NOT_SPECIFIED)
+    completeness += PROFILE_COMPLETENESS_WEIGHTS.year
+  if (
+    normalized.learning_style &&
+    normalized.learning_style !== NOT_SPECIFIED
+  )
+    completeness += PROFILE_COMPLETENESS_WEIGHTS.learning_style
+  if (
+    normalized.study_preference &&
+    normalized.study_preference !== NOT_SPECIFIED
+  )
+    completeness += PROFILE_COMPLETENESS_WEIGHTS.study_preference
+
+  return completeness
+}
+
+/* ----------------------------------------
+   MATCH SCORING
+---------------------------------------- */
+export function calculateMatchScore(
+  currentUser: UserProfile,
+  otherUser: UserProfile
+): MatchResult {
+  const current = normalizeProfile(currentUser)
+  const other = normalizeProfile(otherUser)
+
+  const currentCourses = ensureArray(current.courses)
+  const currentInterests = ensureArray(current.interests)
+  const otherCourses = ensureArray(other.courses)
+  const otherInterests = ensureArray(other.interests)
+
+  const currentCoursesLower = new Set(currentCourses.map(c => c.toLowerCase()))
+  const currentInterestsLower = new Set(currentInterests.map(i => i.toLowerCase()))
+  const otherCoursesLower = new Set(otherCourses.map(c => c.toLowerCase()))
+  const otherInterestsLower = new Set(otherInterests.map(i => i.toLowerCase()))
+
+  const commonCourses = otherCourses.filter(c =>
+    currentCoursesLower.has(c.toLowerCase())
+  )
+
+  const commonInterests = otherInterests.filter(i =>
+    currentInterestsLower.has(i.toLowerCase())
+  )
+
+  const mutualTeachingOpportunities = currentCourses.filter(c =>
+    otherInterestsLower.has(c.toLowerCase())
+  )
+
+  const mutualLearningOpportunities = currentInterests.filter(i =>
+    otherCoursesLower.has(i.toLowerCase())
+  )
+
+  let score = 0
+  const reasons: string[] = []
+
+  if (mutualTeachingOpportunities.length > 0) {
+    score +=
+      mutualTeachingOpportunities.length *
+      MATCH_SCORE_WEIGHTS.mutual_match
+    reasons.push(
+      `You can teach ${mutualTeachingOpportunities.length} course(s)`
+    )
+  }
+
+  if (mutualLearningOpportunities.length > 0) {
+    score +=
+      mutualLearningOpportunities.length *
+      MATCH_SCORE_WEIGHTS.mutual_match
+    reasons.push(
+      `They can teach ${mutualLearningOpportunities.length} course(s)`
+    )
+  }
+
+  if (commonInterests.length > 0) {
+    score += commonInterests.length * MATCH_SCORE_WEIGHTS.interest
+    reasons.push(`${commonInterests.length} shared interest(s)`)
+  }
+
+  if (commonCourses.length > 0) {
+    score += commonCourses.length * MATCH_SCORE_WEIGHTS.course
+    reasons.push(`${commonCourses.length} common course(s)`)
+  }
+
+  if (
+    current.major &&
+    other.major &&
+    current.major === other.major &&
+    current.major !== NOT_SPECIFIED
+  ) {
+    score += MATCH_SCORE_WEIGHTS.same_major
+    reasons.push("Same major")
+  } else if (other.major && other.major !== NOT_SPECIFIED) {
+    score += MATCH_SCORE_WEIGHTS.has_major
+    reasons.push("Major specified")
+  }
+
+  if (
+    current.year &&
+    other.year &&
+    current.year === other.year &&
+    current.year !== NOT_SPECIFIED
+  ) {
+    score += MATCH_SCORE_WEIGHTS.same_year
+    reasons.push("Same year")
+  }
+
+  if (
+    current.learning_style === other.learning_style &&
+    current.learning_style !== NOT_SPECIFIED
+  ) {
+    score += MATCH_SCORE_WEIGHTS.learning_style
+    reasons.push("Compatible learning style")
+  }
+
+  if (
+    current.study_preference === other.study_preference &&
+    current.study_preference !== NOT_SPECIFIED
+  ) {
+    score += MATCH_SCORE_WEIGHTS.study_preference
+    reasons.push("Similar study schedule")
+  }
+
+  const profileCompleteness = calculateProfileCompleteness(other)
+
+  if (profileCompleteness >= 80) {
+    score += MATCH_SCORE_WEIGHTS.complete_profile
+    reasons.push("Complete profile")
+  } else if (profileCompleteness >= 50) {
+    score += MATCH_SCORE_WEIGHTS.partial_profile
+  }
+
+  score = Math.min(score, 100)
+
+  return {
+    user_id: other.user_id,
+    match_score: score,
+    common_courses: commonCourses,
+    common_interests: commonInterests,
+    mutual_teaching_opportunities: mutualTeachingOpportunities,
+    mutual_learning_opportunities: mutualLearningOpportunities,
+    reasons,
+    profile_completeness: profileCompleteness,
+  }
+}
+
+/* ----------------------------------------
+   RANK MATCHES
+---------------------------------------- */
+export function rankMatches(
+  currentUser: UserProfile,
+  potentialMatches: UserProfile[]
+): MatchResult[] {
+  return potentialMatches
+    .map(match => calculateMatchScore(currentUser, match))
+    .sort((a, b) =>
+      b.match_score !== a.match_score
+        ? b.match_score - a.match_score
+        : b.profile_completeness - a.profile_completeness
+    )
+}
