@@ -6,6 +6,21 @@ const router = express.Router()
 router.use(requireAuth)
 
 /**
+ * Helper function to find a connection between two users (bidirectional)
+ * Checks both (userId1, userId2) and (userId2, userId1) combinations
+ */
+async function findConnectionBetweenUsers(userId1, userId2) {
+  return await prisma.connection.findFirst({
+    where: {
+      OR: [
+        { userId1, userId2 },
+        { userId1: userId2, userId2: userId1 },
+      ],
+    },
+  })
+}
+
+/**
  * List connections for a user (accepted or pending)
  * Connections represent mutual acceptance, similar to Facebook's 'friends'
  * Match suggestions are stored separately in the matches table
@@ -43,15 +58,8 @@ router.post("/", async (req, res) => {
     }
     if (!userId2) return res.status(400).json({ error: "userId2 is required" })
     
-    // Check if connection already exists
-    const existing = await prisma.connection.findFirst({
-      where: {
-        OR: [
-          { userId1: me, userId2 },
-          { userId1: userId2, userId2: me },
-        ],
-      },
-    })
+    // Check if connection already exists (bidirectional)
+    const existing = await findConnectionBetweenUsers(me, userId2)
 
     if (existing) {
       // If connection already exists, update its status

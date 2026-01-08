@@ -143,6 +143,10 @@ export async function regenerateMatchesForUser(userId) {
     }
 
     // Delete old match suggestions for this user (keep accepted matches)
+    // Note: This is a simple approach that deletes all suggestions and recreates them.
+    // For large-scale deployments with many matches, consider using an upsert approach
+    // that only updates changed matches. Current approach is simpler and adequate for
+    // most use cases, as profile updates are relatively infrequent.
     await prisma.match.deleteMany({
       where: {
         OR: [{ userId1: userId }, { userId2: userId }],

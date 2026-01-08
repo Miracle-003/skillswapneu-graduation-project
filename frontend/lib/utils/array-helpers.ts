@@ -23,7 +23,7 @@ export function ensureArray(value: string[] | string | undefined | null): string
     // Handle comma-separated strings or JSON arrays
     try {
       const parsed = JSON.parse(value)
-      return Array.isArray(parsed) ? parsed : [value]
+      return Array.isArray(parsed) ? parsed : [parsed]
     } catch {
       return value.split(',').map(s => s.trim()).filter(Boolean)
     }
