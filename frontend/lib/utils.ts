@@ -5,10 +5,9 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
 
-/* ---------------------------------------------
-   PROFILE COMPLETION CALCULATOR
-   --------------------------------------------- */
-
+/* ----------------------------------------
+   PROFILE COMPLETENESS (DISPLAY ONLY)
+---------------------------------------- */
 export function calculateProfileCompletion(profile: any): number {
   if (!profile) return 0
 
@@ -19,12 +18,11 @@ export function calculateProfileCompletion(profile: any): number {
     profile.bio,
     profile.learningStyle,
     profile.studyPreference,
-    Array.isArray(profile.interests) && profile.interests.length > 0,
-    Array.isArray(profile.courses) && profile.courses.length > 0,
+    profile.interests?.length > 0,
+    profile.courses?.length > 0,
   ]
 
-  const completed = fields.filter(Boolean).length
-  const total = fields.length
-
-  return Math.round((completed / total) * 100)
+  return Math.round(
+    (fields.filter(Boolean).length / fields.length) * 100
+  )
 }
