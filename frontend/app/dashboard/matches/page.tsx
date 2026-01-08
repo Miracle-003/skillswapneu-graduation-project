@@ -2,53 +2,40 @@
 
 import { useEffect, useState } from "react"
 import Link from "next/link"
-import { ArrowLeft, Users } from "lucide-react"
+import { ArrowLeft } from "lucide-react"
 
-import { Button } from "@/components/ui/button"
-import { Card, CardContent } from "@/components/ui/card"
-import { Alert, AlertDescription } from "@/components/ui/alert"
-
-import { authService } from "@/lib/api/services/auth.service"
-import { profileService } from "@/lib/api/services/profile.service"
-import { calculateProfileCompletion } from "@/lib/utils"
+interface Match {
+  user_id: string
+  match_score: number
+  reasons: string[]
+}
 
 export default function MatchesPage() {
   const [loading, setLoading] = useState(true)
-  const [completion, setCompletion] = useState(0)
+  const [matches, setMatches] = useState<Match[]>([])
+  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    const loadProfile = async () => {
+    const loadMatches = async () => {
       try {
-        const me = await authService.me()
-        const userId = me.user?.id || me.user?.sub || me.id
+        // TEMP SAFE FETCH — replace later if needed
+        const res = await fetch("/api/matches")
 
-        if (!userId) {
-          setCompletion(0)
-          return
+        if (!res.ok) {
+          throw new Error("Failed to load matches")
         }
 
-        const profile = await profileService.getById(userId)
-        const percent = calculateProfileCompletion(profile)
-
-        setCompletion(percent)
-      } catch (error) {
-        console.error("Failed to load profile", error)
-        setCompletion(0)
+        const data = await res.json()
+        setMatches(Array.isArray(data) ? data : [])
+      } catch (err: any) {
+        setError(err.message || "Something went wrong")
       } finally {
         setLoading(false)
       }
     }
 
-    loadProfile()
+    loadMatches()
   }, [])
-
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        Loading matches...
-      </div>
-    )
-  }
 
   return (
     <div className="min-h-screen p-6 bg-background">
@@ -61,17 +48,45 @@ export default function MatchesPage() {
           Back to Dashboard
         </Link>
 
-        <h1 className="text-3xl font-bold">Find Your Study Partner</h1>
+        <h1 className="text-2xl font-bold">Your Matches</h1>
 
-        {completion < 100 && (
-          <Alert variant="destructive">
-            <AlertDescription>
-              Your profile is {completion}% complete.  
-              Add more information to get better matches.
-            </AlertDescription>
-          </Alert>
+        {loading && <p>Loading matches...</p>}
+
+        {error && (
+          <p className="text-red-600 text-sm">
+            {error}
+          </p>
         )}
 
-        {completion >= 100 && (
-          <Card className="mt-8">
-            <CardContent c
+        {!loading && !error && matches.length === 0 && (
+          <p className="text-muted-foreground">
+            No matches yet. Try completing your profile.
+          </p>
+        )}
+
+        {!loading && matches.length > 0 && (
+          <div className="space-y-4">
+            {matches.map((match) => (
+              <div
+                key={match.user_id}
+                className="border rounded-lg p-4 bg-white shadow-sm"
+              >
+                <p className="font-medium">
+                  Match score: {match.match_score}%
+                </p>
+
+                {match.reasons?.length > 0 && (
+                  <ul className="list-disc ml-5 text-sm text-muted-foreground">
+                    {match.reasons.map((reason, i) => (
+                      <li key={i}>{reason}</li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
