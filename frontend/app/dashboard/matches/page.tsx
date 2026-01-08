@@ -1,3 +1,20 @@
+/**
+ * Find Your Partner Page (Matches Page)
+ * 
+ * This page implements the updated matchmaking workflow:
+ * 1. Match suggestions are displayed based on course/interest overlap
+ * 2. Matches are automatically generated and stored in the database when users qualify
+ * 3. Connections are only created when users mutually accept a match (similar to Facebook friends)
+ * 4. The page properly handles array/string serialization from the database/API
+ * 5. Match suggestions are refetched when a user updates their profile
+ * 
+ * Flow:
+ * - Display all match suggestions that meet the criteria (one user's interest matches another's course)
+ * - When user clicks "Connect" (Heart button), create a connection in the connections table
+ * - Connected users are filtered out from future match suggestions
+ * - Profile completeness is calculated and displayed to encourage users to complete their profiles
+ */
+
 "use client"
 
 import { useState, useEffect } from "react"
@@ -106,6 +123,26 @@ export default function MatchesPage() {
     return obj.userId || obj.user_id
   }
 
+  /**
+   * Helper function to ensure a value is always an array
+   * Handles string serialization issues from the database/API
+   * This is critical for handling array/string mismatches due to serialization
+   */
+  const ensureArray = (value: string[] | string | undefined | null): string[] => {
+    if (!value) return []
+    if (Array.isArray(value)) return value
+    if (typeof value === 'string') {
+      // Handle comma-separated strings or JSON arrays
+      try {
+        const parsed = JSON.parse(value)
+        return Array.isArray(parsed) ? parsed : [value]
+      } catch {
+        return value.split(',').map(s => s.trim()).filter(Boolean)
+      }
+    }
+    return []
+  }
+
   // Helper function to extract user ID from a connection object
   // Connections have userId1/userId2 (from Prisma Client camelCase conversion)
   const extractConnectionUserIds = (connection: ApiConnection | null | undefined, currentUserId: string): string | undefined => {
@@ -124,11 +161,14 @@ export default function MatchesPage() {
     return undefined
   }
 
-  // Helper function to convert API profile format to matching algorithm format
+  /**
+   * Helper function to convert API profile format to matching algorithm format
+   * Ensures proper handling of arrays (courses/interests) which may be strings due to serialization
+   */
   const formatProfileForMatching = (profile: ApiProfile) => ({
     user_id: extractUserId(profile) || '',
-    courses: profile.courses || [],
-    interests: profile.interests || [],
+    courses: ensureArray(profile.courses),
+    interests: ensureArray(profile.interests),
     major: profile.major || NOT_SPECIFIED,
     year: profile.year || NOT_SPECIFIED,
     learning_style: profile.learningStyle || profile.learning_style || NOT_SPECIFIED,
