@@ -11,6 +11,8 @@
  * and display match suggestions to users.
  */
 
+import { ensureArray } from './utils/array-helpers'
+
 interface UserProfile {
   user_id: string
   courses?: string[] | string
@@ -34,25 +36,6 @@ interface MatchResult {
 
 // Constants
 export const NOT_SPECIFIED = 'Not specified'
-
-/**
- * Helper function to ensure a value is always an array
- * Handles string serialization issues from the database/API
- */
-function ensureArray(value: string[] | string | undefined | null): string[] {
-  if (!value) return []
-  if (Array.isArray(value)) return value
-  if (typeof value === 'string') {
-    // Handle comma-separated strings or JSON arrays
-    try {
-      const parsed = JSON.parse(value)
-      return Array.isArray(parsed) ? parsed : [value]
-    } catch {
-      return value.split(',').map(s => s.trim()).filter(Boolean)
-    }
-  }
-  return []
-}
 
 // Scoring constants for profile completeness
 const PROFILE_COMPLETENESS_WEIGHTS = {

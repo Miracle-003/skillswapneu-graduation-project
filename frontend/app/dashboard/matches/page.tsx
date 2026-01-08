@@ -31,6 +31,7 @@ import Link from "next/link"
 import { motion, AnimatePresence } from "framer-motion"
 import { toast } from "sonner"
 import { calculateProfileCompleteness, calculateMatchScore, NOT_SPECIFIED } from "@/lib/matching-algorithm"
+import { ensureArray } from "@/lib/utils/array-helpers"
 
 // API profile format (handles both camelCase and snake_case)
 interface ApiProfile {
@@ -121,26 +122,6 @@ export default function MatchesPage() {
     if (!obj) return undefined
     // Prefer userId (camelCase from Prisma Client), fallback to user_id (snake_case)
     return obj.userId || obj.user_id
-  }
-
-  /**
-   * Helper function to ensure a value is always an array
-   * Handles string serialization issues from the database/API
-   * This is critical for handling array/string mismatches due to serialization
-   */
-  const ensureArray = (value: string[] | string | undefined | null): string[] => {
-    if (!value) return []
-    if (Array.isArray(value)) return value
-    if (typeof value === 'string') {
-      // Handle comma-separated strings or JSON arrays
-      try {
-        const parsed = JSON.parse(value)
-        return Array.isArray(parsed) ? parsed : [value]
-      } catch {
-        return value.split(',').map(s => s.trim()).filter(Boolean)
-      }
-    }
-    return []
   }
 
   // Helper function to extract user ID from a connection object

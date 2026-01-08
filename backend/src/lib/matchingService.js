@@ -150,9 +150,9 @@ export async function regenerateMatchesForUser(userId) {
       },
     })
 
-    // Create new match suggestions (use createMany for efficiency)
-    // Note: createMany doesn't support skipDuplicates in PostgreSQL with unique constraints on multiple fields
-    // So we'll create them individually with upsert
+    // Create new match suggestions one by one
+    // We check for existing matches before creating to avoid duplicates
+    // This is necessary because we don't have a unique constraint on (userId1, userId2)
     let created = 0
     for (const match of matchesToCreate) {
       try {
