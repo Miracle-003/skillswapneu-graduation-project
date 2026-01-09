@@ -1,57 +1,67 @@
-"use client"
+"use client";
 
-import { useEffect, useState } from "react"
-import { useRouter } from "next/navigation"
-import Link from "next/link"
-import { authService } from "@/lib/api/services/auth.service"
-import { profileService } from "@/lib/api/services/profile.service"
-import { useRequireAuth } from "@/lib/api/hooks/useRequireAuth"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { LogOut, User, Users, MessageSquare, BookOpen, FileText, Trophy, Sparkles, Bell, MapPin } from "lucide-react"
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import Link from "next/link";
+import { profileService } from "@/lib/api/services";
+import { useRequireAuth } from "@/lib/api/hooks/useRequireAuth";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import {
+  LogOut,
+  User,
+  Users,
+  MessageSquare,
+  BookOpen,
+  FileText,
+  Trophy,
+  Sparkles,
+  Bell,
+  MapPin,
+} from "lucide-react";
 
 export default function DashboardPage() {
-  const router = useRouter()
-  const { user, loading: authLoading } = useRequireAuth()
-  const [email, setEmail] = useState<string | null>(null)
-  const [profile, setProfile] = useState<any | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [notificationCount, setNotificationCount] = useState(0)
+  const router = useRouter();
+  const { user, loading: authLoading } = useRequireAuth();
+  const [email, setEmail] = useState<string | null>(null);
+  const [profile, setProfile] = useState<any | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [notificationCount] = useState(0);
 
   useEffect(() => {
     const init = async () => {
-      if (!user) return
-      setEmail(user.email)
+      if (!user) return;
+      setEmail(user.email);
       try {
-        const prof = await profileService.getById(user.id)
-        setProfile(prof)
-        await loadNotificationCount(user.id)
+        const prof = await profileService.getById(user.id);
+        setProfile(prof);
+      } catch (error) {
+        console.log("[v0] No profile found for user");
       } finally {
-        setLoading(false)
+        setLoading(false);
       }
-    }
-    void init()
-  }, [user])
-
-  const loadNotificationCount = async (_userId: string) => {
-    try {
-      // Placeholder until backend metrics endpoint exists
-      setNotificationCount(0)
-    } catch {}
-  }
+    };
+    void init();
+  }, [user]);
 
   const handleSignOut = async () => {
-    if (typeof window !== "undefined") localStorage.removeItem("auth_token")
-    router.push("/auth/login")
-  }
+    if (typeof window !== "undefined") localStorage.removeItem("auth_token");
+    router.push("/auth/login");
+  };
 
   if (loading || authLoading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <p className="text-muted-foreground">Loading...</p>
       </div>
-    )
+    );
   }
 
   return (
@@ -65,8 +75,16 @@ export default function DashboardPage() {
             <h1 className="text-xl font-bold">skill swap</h1>
           </div>
           <div className="flex items-center gap-2 sm:gap-4 flex-wrap justify-end min-w-0 max-w-full">
-            <Button asChild variant="ghost" size="sm" className="relative px-2 sm:px-3">
-              <Link href="/dashboard/notifications" className="inline-flex items-center">
+            <Button
+              asChild
+              variant="ghost"
+              size="sm"
+              className="relative px-2 sm:px-3"
+            >
+              <Link
+                href="/dashboard/notifications"
+                className="inline-flex items-center"
+              >
                 <Bell className="w-4 h-4 sm:mr-2" />
                 <span className="hidden sm:inline">Notifications</span>
                 {notificationCount > 0 && (
@@ -77,13 +95,23 @@ export default function DashboardPage() {
               </Link>
             </Button>
             <Button asChild variant="ghost" size="sm" className="px-2 sm:px-3">
-              <Link href="/dashboard/achievements" className="inline-flex items-center">
+              <Link
+                href="/dashboard/achievements"
+                className="inline-flex items-center"
+              >
                 <Trophy className="w-4 h-4 sm:mr-2" />
                 <span className="hidden sm:inline">Achievements</span>
               </Link>
             </Button>
-            <span className="hidden sm:inline-block max-w-[160px] truncate text-sm text-muted-foreground">{email}</span>
-            <Button onClick={handleSignOut} variant="outline" size="sm" className="px-2 sm:px-3">
+            <span className="hidden sm:inline-block max-w-[160px] truncate text-sm text-muted-foreground">
+              {email}
+            </span>
+            <Button
+              onClick={handleSignOut}
+              variant="outline"
+              size="sm"
+              className="px-2 sm:px-3 bg-transparent"
+            >
               <LogOut className="w-4 h-4 sm:mr-2" />
               <span className="hidden sm:inline">Sign Out</span>
             </Button>
@@ -94,7 +122,9 @@ export default function DashboardPage() {
       <main className="max-w-7xl mx-auto px-4 py-8">
         <div className="mb-8">
           <h2 className="text-3xl font-bold mb-2">Welcome to Your Dashboard</h2>
-          <p className="text-muted-foreground">Start connecting with study partners and achieve your academic goals</p>
+          <p className="text-muted-foreground">
+            Start connecting with study partners and achieve your academic goals
+          </p>
         </div>
 
         {!profile && (
@@ -105,13 +135,15 @@ export default function DashboardPage() {
                   <Sparkles className="w-6 h-6 text-white" />
                 </div>
                 <div className="flex-1">
-                  <h3 className="font-semibold text-lg mb-1">Get Started with AI Onboarding</h3>
+                  <h3 className="font-semibold text-lg mb-1">
+                    Complete Your Profile
+                  </h3>
                   <p className="text-sm text-muted-foreground">
-                    Chat with our AI assistant to learn how to make the most of skill swap
+                    Set up your profile to start matching with study partners
                   </p>
                 </div>
                 <Button asChild className="bg-[#8B1538] hover:bg-[#A91D3A]">
-                  <Link href="/dashboard/onboarding">Start Onboarding</Link>
+                  <Link href="/dashboard/profile">Setup Profile</Link>
                 </Button>
               </div>
             </CardContent>
@@ -124,12 +156,21 @@ export default function DashboardPage() {
               <div className="w-12 h-12 bg-[#8B1538] rounded-lg flex items-center justify-center mb-2">
                 <User className="w-6 h-6 text-white" />
               </div>
-              <CardTitle>{profile ? "Edit Your Profile" : "Complete Your Profile"}</CardTitle>
-              <CardDescription>Add your courses, interests, and learning preferences</CardDescription>
+              <CardTitle>
+                {profile ? "Edit Your Profile" : "Complete Your Profile"}
+              </CardTitle>
+              <CardDescription>
+                Add your courses, interests, and learning preferences
+              </CardDescription>
             </CardHeader>
             <CardContent>
-              <Button asChild className="w-full bg-[#8B1538] hover:bg-[#A91D3A]">
-                <Link href="/dashboard/profile">{profile ? "Edit Profile" : "Setup Profile"}</Link>
+              <Button
+                asChild
+                className="w-full bg-[#8B1538] hover:bg-[#A91D3A]"
+              >
+                <Link href="/dashboard/profile">
+                  {profile ? "Edit Profile" : "Setup Profile"}
+                </Link>
               </Button>
             </CardContent>
           </Card>
@@ -140,10 +181,16 @@ export default function DashboardPage() {
                 <Users className="w-6 h-6 text-white" />
               </div>
               <CardTitle>Find Study Partners</CardTitle>
-              <CardDescription>Get matched with compatible peers in your courses</CardDescription>
+              <CardDescription>
+                Get matched with compatible peers in your courses
+              </CardDescription>
             </CardHeader>
             <CardContent>
-              <Button asChild className="w-full bg-transparent" variant="outline">
+              <Button
+                asChild
+                className="w-full bg-transparent"
+                variant="outline"
+              >
                 <Link href="/dashboard/matches">Browse Matches</Link>
               </Button>
             </CardContent>
@@ -155,10 +202,16 @@ export default function DashboardPage() {
                 <MessageSquare className="w-6 h-6 text-white" />
               </div>
               <CardTitle>Start Chatting</CardTitle>
-              <CardDescription>Connect with your study buddies in real-time</CardDescription>
+              <CardDescription>
+                Connect with your study buddies in real-time
+              </CardDescription>
             </CardHeader>
             <CardContent>
-              <Button asChild className="w-full bg-transparent" variant="outline">
+              <Button
+                asChild
+                className="w-full bg-transparent"
+                variant="outline"
+              >
                 <Link href="/dashboard/chat">Open Messages</Link>
               </Button>
             </CardContent>
@@ -170,10 +223,16 @@ export default function DashboardPage() {
                 <FileText className="w-6 h-6 text-white" />
               </div>
               <CardTitle>Peer Reviews</CardTitle>
-              <CardDescription>Get feedback and help others improve</CardDescription>
+              <CardDescription>
+                Get feedback and help others improve
+              </CardDescription>
             </CardHeader>
             <CardContent>
-              <Button asChild className="w-full bg-transparent" variant="outline">
+              <Button
+                asChild
+                className="w-full bg-transparent"
+                variant="outline"
+              >
                 <Link href="/dashboard/reviews">View Reviews</Link>
               </Button>
             </CardContent>
@@ -185,10 +244,16 @@ export default function DashboardPage() {
                 <MapPin className="w-6 h-6 text-white" />
               </div>
               <CardTitle>Study Locations</CardTitle>
-              <CardDescription>Find the best places to study on campus</CardDescription>
+              <CardDescription>
+                Find the best places to study on campus
+              </CardDescription>
             </CardHeader>
             <CardContent>
-              <Button asChild className="w-full bg-transparent" variant="outline">
+              <Button
+                asChild
+                className="w-full bg-transparent"
+                variant="outline"
+              >
                 <Link href="/dashboard/study-locations">View Map</Link>
               </Button>
             </CardContent>
@@ -196,5 +261,5 @@ export default function DashboardPage() {
         </div>
       </main>
     </div>
-  )
+  );
 }

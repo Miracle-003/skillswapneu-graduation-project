@@ -1,74 +1,82 @@
-"use client"
+"use client";
 
-import type React from "react"
-import { useEffect, useState } from "react"
-import Link from "next/link"
+import type React from "react";
+import { useEffect, useState } from "react";
+import Link from "next/link";
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-} from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Textarea } from "@/components/ui/textarea"
+} from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select"
-import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Loader2, CheckCircle, ArrowLeft, Pencil } from "lucide-react"
-import { authService } from "@/lib/api/services/auth.service"
-import { profileService, type ProfileData } from "@/lib/api/services/profile.service"
+} from "@/components/ui/select";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Loader2, CheckCircle, ArrowLeft, Pencil } from "lucide-react";
+import {
+  authService,
+  profileService,
+  type ProfileData,
+} from "@/lib/api/services";
 
 /* -------------------- PAGE -------------------- */
 
 export default function ProfilePage() {
-  const [initialLoading, setInitialLoading] = useState(true)
-  const [saving, setSaving] = useState(false)
-  const [editing, setEditing] = useState(false)
+  const [initialLoading, setInitialLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [editing, setEditing] = useState(false);
 
-  const [error, setError] = useState("")
-  const [success, setSuccess] = useState(false)
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState(false);
 
   // form state
-  const [fullName, setFullName] = useState("")
-  const [major, setMajor] = useState("")
-  const [year, setYear] = useState("")
-  const [bio, setBio] = useState("")
-  const [learningStyle, setLearningStyle] = useState("")
-  const [studyTimePreference, setStudyTimePreference] = useState("")
-  const [interests, setInterests] = useState("")
-  const [courses, setCourses] = useState("")
+  const [fullName, setFullName] = useState("");
+  const [major, setMajor] = useState("");
+  const [year, setYear] = useState("");
+  const [bio, setBio] = useState("");
+  const [learningStyle, setLearningStyle] = useState("");
+  const [studyTimePreference, setStudyTimePreference] = useState("");
+  const [interests, setInterests] = useState("");
+  const [courses, setCourses] = useState("");
 
   // snapshot for cancel
-  const [originalData, setOriginalData] = useState<any>(null)
+  const [originalData, setOriginalData] = useState<any>(null);
 
   /* -------------------- LOAD -------------------- */
 
   useEffect(() => {
-    const token = typeof window !== "undefined" ? localStorage.getItem("auth_token") : null
+    const token =
+      typeof window !== "undefined" ? localStorage.getItem("auth_token") : null;
     if (!token) {
-      setInitialLoading(false)
-      return
+      console.log("[v0] No auth token found, profile loading skipped");
+      setInitialLoading(false);
+      setEditing(true); // Start in edit mode if no profile exists
+      return;
     }
 
     const load = async () => {
       try {
         // Get current user to know which profile to load
-        const me = await authService.me()
-        const userId = me.user?.id || me.user?.sub || me.id
+        const me = await authService.me();
+        console.log("[v0] Current user:", me);
+        const userId = me.user?.id || me.user?.sub || me.id;
 
         if (!userId) {
-          throw new Error("Could not determine current user id")
+          throw new Error("Could not determine current user id");
         }
 
-        const profile = await profileService.getById(userId)
+        const profile = await profileService.getById(userId);
+        console.log("[v0] Loaded profile:", profile);
 
         const normalized = {
           fullName: profile.fullName || "",
@@ -79,45 +87,50 @@ export default function ProfilePage() {
           studyTimePreference: profile.studyPreference || "",
           interests: (profile.interests || []).join(", ") || "",
           courses: (profile.courses || []).join(", ") || "",
-        }
+        };
 
-        setOriginalData(normalized)
+        setOriginalData(normalized);
 
-        setFullName(normalized.fullName)
-        setMajor(normalized.major)
-        setYear(normalized.year)
-        setBio(normalized.bio)
-        setLearningStyle(normalized.learningStyle)
-        setStudyTimePreference(normalized.studyTimePreference)
-        setInterests(normalized.interests)
-        setCourses(normalized.courses)
+        setFullName(normalized.fullName);
+        setMajor(normalized.major);
+        setYear(normalized.year);
+        setBio(normalized.bio);
+        setLearningStyle(normalized.learningStyle);
+        setStudyTimePreference(normalized.studyTimePreference);
+        setInterests(normalized.interests);
+        setCourses(normalized.courses);
       } catch (err: any) {
-        setError(err.message || "Failed to load profile")
+        console.error("[v0] Profile load error:", err);
+        if (err.response?.status === 404) {
+          setEditing(true);
+        } else {
+          setError(err.message || "Failed to load profile");
+        }
       } finally {
-        setInitialLoading(false)
+        setInitialLoading(false);
       }
-    }
+    };
 
-    load()
-  }, [])
+    load();
+  }, []);
 
   /* -------------------- SAVE -------------------- */
 
   const handleSave = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setSaving(true)
-    setError("")
-    setSuccess(false)
+    e.preventDefault();
+    setSaving(true);
+    setError("");
+    setSuccess(false);
 
     const parsedInterests = interests
       .split(",")
       .map((i) => i.trim())
-      .filter(Boolean)
+      .filter(Boolean);
 
     const parsedCourses = courses
       .split(",")
       .map((c) => c.trim())
-      .filter(Boolean)
+      .filter(Boolean);
 
     const payload: ProfileData = {
       fullName,
@@ -128,12 +141,15 @@ export default function ProfilePage() {
       studyPreference: studyTimePreference,
       interests: parsedInterests,
       courses: parsedCourses,
-    }
+    };
+
+    console.log("[v0] Saving profile with payload:", payload);
 
     try {
-      await profileService.upsert(payload)
-      setSuccess(true)
-      setEditing(false)
+      const result = await profileService.upsert(payload);
+      console.log("[v0] Profile saved successfully:", result);
+      setSuccess(true);
+      setEditing(false);
       setOriginalData({
         fullName,
         major,
@@ -143,27 +159,30 @@ export default function ProfilePage() {
         studyTimePreference,
         interests,
         courses,
-      })
-      setTimeout(() => setSuccess(false), 3000)
+      });
+      setTimeout(() => setSuccess(false), 3000);
     } catch (err: any) {
-      setError(err.response?.data?.error || err.message || "Failed to update profile")
+      console.error("[v0] Profile save error:", err);
+      setError(
+        err.response?.data?.error || err.message || "Failed to update profile",
+      );
     } finally {
-      setSaving(false)
+      setSaving(false);
     }
-  }
+  };
 
   const cancelEdit = () => {
-    if (!originalData) return
-    setFullName(originalData.fullName)
-    setMajor(originalData.major)
-    setYear(originalData.year)
-    setBio(originalData.bio)
-    setLearningStyle(originalData.learningStyle)
-    setStudyTimePreference(originalData.studyTimePreference)
-    setInterests(originalData.interests)
-    setCourses(originalData.courses)
-    setEditing(false)
-  }
+    if (!originalData) return;
+    setFullName(originalData.fullName);
+    setMajor(originalData.major);
+    setYear(originalData.year);
+    setBio(originalData.bio);
+    setLearningStyle(originalData.learningStyle);
+    setStudyTimePreference(originalData.studyTimePreference);
+    setInterests(originalData.interests);
+    setCourses(originalData.courses);
+    setEditing(false);
+  };
 
   /* -------------------- UI -------------------- */
 
@@ -172,7 +191,7 @@ export default function ProfilePage() {
       <div className="min-h-screen flex items-center justify-center">
         <Loader2 className="w-8 h-8 animate-spin text-[#8B1538]" />
       </div>
-    )
+    );
   }
 
   return (
@@ -229,16 +248,26 @@ export default function ProfilePage() {
 
             <CardContent className="space-y-6">
               <Field label="Full Name">
-                <Input disabled={!editing} value={fullName} onChange={e => setFullName(e.target.value)} />
+                <Input
+                  disabled={!editing}
+                  value={fullName}
+                  onChange={(e) => setFullName(e.target.value)}
+                />
               </Field>
 
               <Field label="Major">
-                <Select disabled={!editing} value={major} onValueChange={setMajor}>
+                <Select
+                  disabled={!editing}
+                  value={major}
+                  onValueChange={setMajor}
+                >
                   <SelectTrigger className="w-full bg-white border border-input">
                     <SelectValue placeholder="Select major" />
                   </SelectTrigger>
                   <SelectContent className="bg-white text-foreground border border-gray-200 shadow-lg z-50 min-w-[12rem]">
-                    <SelectItem value="computer-science">Computer Science</SelectItem>
+                    <SelectItem value="computer-science">
+                      Computer Science
+                    </SelectItem>
                     <SelectItem value="engineering">Engineering</SelectItem>
                     <SelectItem value="business">Business</SelectItem>
                     <SelectItem value="other">Other</SelectItem>
@@ -247,7 +276,11 @@ export default function ProfilePage() {
               </Field>
 
               <Field label="Year">
-                <Select disabled={!editing} value={year} onValueChange={setYear}>
+                <Select
+                  disabled={!editing}
+                  value={year}
+                  onValueChange={setYear}
+                >
                   <SelectTrigger className="w-full bg-white border border-input">
                     <SelectValue placeholder="Select year" />
                   </SelectTrigger>
@@ -262,11 +295,19 @@ export default function ProfilePage() {
               </Field>
 
               <Field label="Bio">
-                <Textarea disabled={!editing} value={bio} onChange={e => setBio(e.target.value)} />
+                <Textarea
+                  disabled={!editing}
+                  value={bio}
+                  onChange={(e) => setBio(e.target.value)}
+                />
               </Field>
 
               <Field label="Learning Style">
-                <Select disabled={!editing} value={learningStyle} onValueChange={setLearningStyle}>
+                <Select
+                  disabled={!editing}
+                  value={learningStyle}
+                  onValueChange={setLearningStyle}
+                >
                   <SelectTrigger className="w-full bg-white border border-input">
                     <SelectValue placeholder="Select learning style" />
                   </SelectTrigger>
@@ -274,13 +315,19 @@ export default function ProfilePage() {
                     <SelectItem value="Visual">Visual</SelectItem>
                     <SelectItem value="Auditory">Auditory</SelectItem>
                     <SelectItem value="Kinesthetic">Kinesthetic</SelectItem>
-                    <SelectItem value="Reading/Writing">Reading/Writing</SelectItem>
+                    <SelectItem value="Reading/Writing">
+                      Reading/Writing
+                    </SelectItem>
                   </SelectContent>
                 </Select>
               </Field>
 
               <Field label="Study Preference">
-                <Select disabled={!editing} value={studyTimePreference} onValueChange={setStudyTimePreference}>
+                <Select
+                  disabled={!editing}
+                  value={studyTimePreference}
+                  onValueChange={setStudyTimePreference}
+                >
                   <SelectTrigger className="w-full bg-white border border-input">
                     <SelectValue placeholder="Select study preference" />
                   </SelectTrigger>
@@ -294,12 +341,22 @@ export default function ProfilePage() {
                 </Select>
               </Field>
 
-              <Field label="Courses">
-                <Input disabled={!editing} value={courses} onChange={e => setCourses(e.target.value)} />
+              <Field label="Courses (comma-separated)">
+                <Input
+                  disabled={!editing}
+                  value={courses}
+                  onChange={(e) => setCourses(e.target.value)}
+                  placeholder="e.g. CS101, MATH201, PHYS101"
+                />
               </Field>
 
-              <Field label="Interests">
-                <Input disabled={!editing} value={interests} onChange={e => setInterests(e.target.value)} />
+              <Field label="Interests (comma-separated)">
+                <Input
+                  disabled={!editing}
+                  value={interests}
+                  onChange={(e) => setInterests(e.target.value)}
+                  placeholder="e.g. Web Development, Machine Learning, Photography"
+                />
               </Field>
             </CardContent>
           </Card>
@@ -317,16 +374,22 @@ export default function ProfilePage() {
         </form>
       </div>
     </div>
-  )
+  );
 }
 
 /* -------------------- SMALL HELPER -------------------- */
 
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
+function Field({
+  label,
+  children,
+}: {
+  label: string;
+  children: React.ReactNode;
+}) {
   return (
     <div className="space-y-2">
       <Label>{label}</Label>
       {children}
     </div>
-  )
+  );
 }

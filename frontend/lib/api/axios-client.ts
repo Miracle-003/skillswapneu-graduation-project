@@ -1,56 +1,53 @@
-import axios from "axios"
+import axios from "axios";
 
-// Resolve baseURL with sane fallbacks and normalization
-function resolveBaseURL() {
-  const apiEnv = (process.env.NEXT_PUBLIC_API_URL || "").trim()
-  if (apiEnv) return apiEnv.replace(/\/+$/, "")
-  const backend = (process.env.NEXT_PUBLIC_BACKEND_URL || process.env.BACKEND_URL || "").trim()
-  if (backend) return backend.replace(/\/+$/, "") + "/api"
-  return "/api"
-}
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001/api";
 
-// Create axios instance with default config
+console.log("[v0] API Client initialized with URL:", API_URL);
+
 export const apiClient = axios.create({
-  baseURL: resolveBaseURL(),
-  // Increase timeout to accommodate cold starts on serverless hosts and Render cold boots
-  timeout: 120000,
+  baseURL: API_URL,
   headers: {
     "Content-Type": "application/json",
   },
-})
+});
 
-// Request interceptor - add auth token if available
-apiClient.interceptors.request.use(
-  (config) => {
-    // Get token from localStorage or cookies
-    const token = typeof window !== "undefined" ? localStorage.getItem("auth_token") : null
+// Add auth token to requests
+apiClient.interceptors.request.use((config) => {
+  const token =
+    typeof window !== "undefined" ? localStorage.getItem("auth_token") : null;
+  if (token) {
+    console.log("[v0] Adding auth token to request:", config.url);
+    config.headers.Authorization = `Bearer ${token}`;
+  } else {
+    console.log("[v0] No auth token found for request:", config.url);
+  }
+  return config;
+});
 
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`
-    }
-
-    return config
-  },
-  (error) => {
-    return Promise.reject(error)
-  },
-)
-
-// Response interceptor - handle errors globally
+// Handle auth errors
 apiClient.interceptors.response.use(
   (response) => {
-    return response
+    console.log(
+      "[v0] API Response success:",
+      response.config.url,
+      response.status,
+    );
+    return response;
   },
   (error) => {
-    // Handle common errors
+    console.error(
+      "[v0] API Response error:",
+      error.config?.url,
+      error.response?.status,
+      error.response?.data,
+    );
     if (error.response?.status === 401) {
-      // Unauthorized - redirect to login
+      // Clear token and redirect to login
       if (typeof window !== "undefined") {
-        localStorage.removeItem("auth_token")
-        window.location.href = "/auth/login"
+        localStorage.removeItem("auth_token");
+        window.location.href = "/login";
       }
     }
-
-    return Promise.reject(error)
+    return Promise.reject(error);
   },
-)
+);

@@ -1,44 +1,39 @@
-import { apiClient } from "../axios-client"
+import { apiClient } from "../axios-client";
 
-// Shape aligned with backend /api/profiles route (see backend/src/routes/profiles.js)
 export interface ProfileData {
-  userId?: string
-  fullName?: string
-  major?: string
-  year?: string
-  bio?: string
-  learningStyle?: string
-  studyPreference?: string
-  interests?: string[]
-  // Legacy/extra fields kept optional for compatibility in other parts of the app
-  courses?: string[]
-  studyPreferences?: string[]
-  availability?: string
-  profilePicture?: string
+  userId?: string;
+  fullName?: string;
+  major?: string;
+  year?: string;
+  bio?: string;
+  learningStyle?: string;
+  studyPreference?: string;
+  interests?: string[];
+  courses?: string[];
+  studyPreferences?: string[];
+  availability?: string;
+  profilePicture?: string;
 }
 
 export const profileService = {
-  // Get all profiles
   getAll: async () => {
-    const response = await apiClient.get("/profiles")
-    return response.data
+    console.log("[v0] Calling /profiles endpoint");
+    const response = await apiClient.get("/profiles");
+    console.log("[v0] /profiles response:", response.data);
+    return response.data;
   },
 
-  // Get profile by ID
   getById: async (id: string) => {
-    const response = await apiClient.get(`/profiles/${id}`)
-    return response.data
+    console.log("[v0] Calling /profiles/:id endpoint with id:", id);
+    const response = await apiClient.get(`/profiles/${id}`);
+    console.log("[v0] /profiles/:id response:", response.data);
+    return response.data;
   },
 
-  // Create or update profile for the current user (userId comes from JWT on the server)
   upsert: async (data: ProfileData) => {
-    const response = await apiClient.post("/profiles", data)
-    return response.data
+    console.log("[v0] Calling /profiles POST endpoint with data:", data);
+    const response = await apiClient.post("/profiles", data);
+    console.log("[v0] /profiles POST response:", response.data);
+    return response.data;
   },
-
-  // Delete profile
-  delete: async (id: string) => {
-    const response = await apiClient.delete(`/profiles/${id}`)
-    return response.data
-  },
-}
+};
