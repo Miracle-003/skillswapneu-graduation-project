@@ -1,8 +1,23 @@
+import dotenv from "dotenv";
+import { fileURLToPath } from "url";
+import { dirname, join } from "path";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+const envPath = join(__dirname, "../.env");
+console.log("[DEBUG] Loading .env from:", envPath);
+const result = dotenv.config({ path: envPath });
+if (result.error) {
+  console.error("[DEBUG] Error loading .env:", result.error);
+} else {
+  console.log("[DEBUG] .env loaded successfully");
+  console.log("[DEBUG] JWT_SECRET exists:", !!process.env.JWT_SECRET);
+}
+
 import express from "express";
 import cors from "cors";
 import helmet from "helmet";
 import morgan from "morgan";
-import dotenv from "dotenv";
 import compression from "compression";
 
 import authRoutes from "./routes/auth.js";
@@ -11,8 +26,6 @@ import matchRoutes from "./routes/matches.js";
 import messageRoutes from "./routes/messages.js";
 import adminRoutes from "./routes/admin.js";
 import connectionRoutes from "./routes/connections.js";
-
-dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 3001;

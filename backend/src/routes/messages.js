@@ -7,6 +7,42 @@ const router = express.Router()
 // All message routes require auth
 router.use(requireAuth)
 
+// Get messages with a specific user (for current logged-in user)
+router.get("/:participantId", async (req, res) => {
+  try {
+    const { participantId } = req.params
+    const me = req.user.id
+
+    const messages = await prisma.message.findMany({
+      where: {
+        OR: [
+          { senderId: me, receiverId: participantId },
+          { senderId: participantId, receiverId: me },
+        ],
+      },
+      orderBy: { createdAt: "asc" },
+    })
+    
+    // Enrich with sender names
+    const enriched = await Promise.all(
+      messages.map(async (msg) => {
+        const senderProfile = await prisma.userProfile.findUnique({
+          where: { userId: msg.senderId }
+        })
+        return {
+          ...msg,
+          sender_name: senderProfile?.fullName || "Unknown",
+          sender_id: msg.senderId
+        }
+      })
+    )
+
+    res.json(enriched)
+  } catch (error) {
+    res.status(400).json({ error: error.message })
+  }
+})
+
 // Get messages between two users
 router.get("/:userId1/:userId2", async (req, res) => {
   try {
@@ -79,6 +115,60 @@ router.get("/recent/:userId", async (req, res) => {
     })
     res.json(msgs)
   } catch (error) {
+    res.status(400).json({ error: error.message })
+  }
+})
+
+// Get conversations (list of connections user can chat with)
+router.get("/conversations", async (req, res) => {
+  try {
+    const me = req.user.id
+    
+    // Get all accepted connections
+    const connections = await prisma.connection.findMany({
+      where: {
+        OR: [
+          { userId1: me, status: "accepted" },
+          { userId2: me, status: "accepted" }
+        ]
+      }
+    })
+    
+    // Map to conversation format with last message
+    const conversations = await Promise.all(
+      connections.map(async (conn) => {
+        const participantId = conn.userId1 === me ? conn.userId2 : conn.userId1
+        
+        // Fetch participant profile separately
+        const participant = await prisma.userProfile.findUnique({
+          where: { userId: participantId }
+        })
+        
+        // Get last message between these users
+        const lastMessage = await prisma.message.findFirst({
+          where: {
+            OR: [
+              { senderId: me, receiverId: participantId },
+              { senderId: participantId, receiverId: me }
+            ]
+          },
+          orderBy: { createdAt: "desc" }
+        })
+        
+        return {
+          id: participantId,
+          participant_id: participantId,
+          participant_name: participant?.fullName || "Unknown User",
+          last_message: lastMessage?.content || "No messages yet",
+          last_message_time: lastMessage?.createdAt || conn.createdAt,
+          unread_count: 0 // TODO: implement unread count if needed
+        }
+      })
+    )
+    
+    res.json(conversations)
+  } catch (error) {
+    console.error("[Messages] Error fetching conversations:", error)
     res.status(400).json({ error: error.message })
   }
 })

@@ -1,17 +1,35 @@
 import { Resend } from 'resend'
 
-const resend = new Resend(process.env.RESEND_API_KEY)
+let resend = null
+
+function getResendClient() {
+  if (!resend) {
+    const apiKey = process.env.RESEND_API_KEY
+    if (!apiKey) {
+      console.warn('[email] RESEND_API_KEY not set, email functionality will be disabled')
+      return null
+    }
+    resend = new Resend(apiKey)
+  }
+  return resend
+}
 
 /**
  * Send verification email using Resend
  */
 export async function sendVerificationEmail({ to, link }) {
+  const client = getResendClient()
+  if (!client) {
+    console.warn('[email] Skipping email send - Resend not configured')
+    return { success: false, error: 'Email service not configured' }
+  }
+  
   try {
     const expiryMinutes = Math.floor(
       parseInt(process.env.EMAIL_VERIFICATION_TTL_SECONDS || '7200') / 60
     )
 
-    const { data, error } = await resend.emails.send({
+    const { data, error } = await client.emails.send({
       from: 'SkillSwap NEU <onboarding@resend.dev>',
       to: [to],
       subject: '✅ Verify Your SkillSwap Account',
@@ -74,8 +92,14 @@ export async function sendVerificationEmail({ to, link }) {
  * Send password reset email using Resend
  */
 export async function sendPasswordResetEmail({ to, link }) {
+  const client = getResendClient()
+  if (!client) {
+    console.warn('[email] Skipping email send - Resend not configured')
+    return { success: false, error: 'Email service not configured' }
+  }
+  
   try {
-    const { data, error } = await resend.emails.send({
+    const { data, error } = await client.emails.send({
       from: 'SkillSwap NEU <onboarding@resend.dev>',
       to: [to],
       subject: '🔒 Reset Your SkillSwap Password',
