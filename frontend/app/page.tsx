@@ -27,7 +27,7 @@ export default function LandingPage() {
             size="lg"
             className="bg-white text-[#8B1538] hover:bg-white/90 px-8"
           >
-            <Link href="/auth/register">Get Started</Link>
+            <Link href="/auth/signup">Get Started</Link>
           </Button>
           <Button
             asChild

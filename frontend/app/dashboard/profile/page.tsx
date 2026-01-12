@@ -160,7 +160,12 @@ export default function ProfilePage() {
         interests,
         courses,
       });
-      setTimeout(() => setSuccess(false), 3000);
+      
+      // Redirect to matches page after successful save
+      setTimeout(() => {
+        console.log("[v0] Redirecting to matches page...");
+        window.location.href = "/dashboard/matches";
+      }, 1500);
     } catch (err: any) {
       console.error("[v0] Profile save error:", err);
       setError(

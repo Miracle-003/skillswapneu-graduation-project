@@ -1,7 +1,7 @@
 // API Client for communicating with Express backend
 // This uses native fetch - no extra dependencies needed!
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000/api"
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001/api"
 
 // Helper: get JWT from localStorage (frontend stores `auth_token`)
 function getAuthToken() {
