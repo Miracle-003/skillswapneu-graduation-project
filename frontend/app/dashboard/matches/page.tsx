@@ -15,6 +15,44 @@ import { authService, profileService, connectionService } from "@/lib/api/servic
 import { matchService } from "@/lib/api/services/match.service";
 import { calculateProfileCompletion } from "@/lib/utils";
 
+// Dummy data for demonstration
+const DUMMY_CONNECTIONS = [
+  {
+    id: "00000000-0000-0000-0000-000000000031",
+    userId1: "current-user",
+    userId2: "00000000-0000-0000-0000-000000000001",
+    status: "accepted",
+    createdAt: new Date(Date.now() - 86400000).toISOString(),
+    otherUserId: "00000000-0000-0000-0000-000000000001",
+    otherUser: {
+      userId: "00000000-0000-0000-0000-000000000001",
+      fullName: "Sarah Johnson",
+      major: "Computer Science",
+      year: "Senior",
+      bio: "Passionate about machine learning and AI.",
+      courses: ["CS 5004", "CS 5008", "CS 5200"],
+      interests: ["Machine Learning", "AI", "Data Science"]
+    }
+  },
+  {
+    id: "00000000-0000-0000-0000-000000000032",
+    userId1: "current-user",
+    userId2: "00000000-0000-0000-0000-000000000002",
+    status: "accepted",
+    createdAt: new Date(Date.now() - 172800000).toISOString(),
+    otherUserId: "00000000-0000-0000-0000-000000000002",
+    otherUser: {
+      userId: "00000000-0000-0000-0000-000000000002",
+      fullName: "Michael Chen",
+      major: "Software Engineering",
+      year: "Junior",
+      bio: "Love coding and algorithms.",
+      courses: ["CS 5002", "CS 5004", "CS 5010"],
+      interests: ["Algorithms", "Web Development", "Mobile Apps"]
+    }
+  }
+];
+
 export default function MatchesPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
@@ -136,65 +174,18 @@ export default function MatchesPage() {
           } else {
             // Use dummy data for presentation
             console.log("[v0] No connections from API, using dummy data");
-            setConnections([
-              {
-                id: "00000000-0000-0000-0000-000000000031",
-                userId1: currentUserId,
-                userId2: "00000000-0000-0000-0000-000000000001",
-                status: "accepted",
-                createdAt: new Date(Date.now() - 86400000).toISOString(),
-                otherUserId: "00000000-0000-0000-0000-000000000001",
-                otherUser: {
-                  userId: "00000000-0000-0000-0000-000000000001",
-                  fullName: "Sarah Johnson",
-                  major: "Computer Science",
-                  year: "Senior",
-                  bio: "Passionate about machine learning and AI.",
-                  courses: ["CS 5004", "CS 5008", "CS 5200"],
-                  interests: ["Machine Learning", "AI", "Data Science"]
-                }
-              },
-              {
-                id: "00000000-0000-0000-0000-000000000032",
-                userId1: currentUserId,
-                userId2: "00000000-0000-0000-0000-000000000002",
-                status: "accepted",
-                createdAt: new Date(Date.now() - 172800000).toISOString(),
-                otherUserId: "00000000-0000-0000-0000-000000000002",
-                otherUser: {
-                  userId: "00000000-0000-0000-0000-000000000002",
-                  fullName: "Michael Chen",
-                  major: "Software Engineering",
-                  year: "Junior",
-                  bio: "Love coding and algorithms.",
-                  courses: ["CS 5002", "CS 5004", "CS 5010"],
-                  interests: ["Algorithms", "Web Development", "Mobile Apps"]
-                }
-              }
-            ]);
+          if (connectionsData && connectionsData.connections && connectionsData.connections.length > 0) {
+            setConnections(connectionsData.connections);
+          } else {
+            // Use dummy data for presentation
+            console.log("[v0] No connections from API, using dummy data");
+            setConnections(DUMMY_CONNECTIONS.map(conn => ({ ...conn, userId1: currentUserId })));
           }
         } catch (connErr: any) {
           console.error("[v0] Failed to load connections:", connErr);
           // Use dummy data on error
-          setConnections([
-            {
-              id: "00000000-0000-0000-0000-000000000031",
-              userId1: currentUserId,
-              userId2: "00000000-0000-0000-0000-000000000001",
-              status: "accepted",
-              createdAt: new Date(Date.now() - 86400000).toISOString(),
-              otherUserId: "00000000-0000-0000-0000-000000000001",
-              otherUser: {
-                userId: "00000000-0000-0000-0000-000000000001",
-                fullName: "Sarah Johnson",
-                major: "Computer Science",
-                year: "Senior",
-                bio: "Passionate about machine learning and AI.",
-                courses: ["CS 5004", "CS 5008", "CS 5200"],
-                interests: ["Machine Learning", "AI", "Data Science"]
-              }
-            }
-          ]);
+          setConnections(DUMMY_CONNECTIONS);
+        }
         }
       } catch (err: any) {
         console.error("[v0] Failed to load data for matches:", err);

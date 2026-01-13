@@ -23,17 +23,27 @@ router.get("/:participantId", async (req, res) => {
       orderBy: { createdAt: "asc" },
     })
     
-    // Mark all messages from participant as read
-    await prisma.message.updateMany({
+    // Mark all messages from participant as read (only if there are unread messages)
+    const unreadCount = await prisma.message.count({
       where: {
         senderId: participantId,
         receiverId: me,
         read: false
-      },
-      data: {
-        read: true
       }
     })
+    
+    if (unreadCount > 0) {
+      await prisma.message.updateMany({
+        where: {
+          senderId: participantId,
+          receiverId: me,
+          read: false
+        },
+        data: {
+          read: true
+        }
+      })
+    }
     
     // Enrich with sender names
     const enriched = await Promise.all(
