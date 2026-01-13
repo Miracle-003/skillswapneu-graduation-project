@@ -174,18 +174,12 @@ export default function MatchesPage() {
           } else {
             // Use dummy data for presentation
             console.log("[v0] No connections from API, using dummy data");
-          if (connectionsData && connectionsData.connections && connectionsData.connections.length > 0) {
-            setConnections(connectionsData.connections);
-          } else {
-            // Use dummy data for presentation
-            console.log("[v0] No connections from API, using dummy data");
             setConnections(DUMMY_CONNECTIONS.map(conn => ({ ...conn, userId1: currentUserId })));
           }
         } catch (connErr: any) {
           console.error("[v0] Failed to load connections:", connErr);
           // Use dummy data on error
           setConnections(DUMMY_CONNECTIONS);
-        }
         }
       } catch (err: any) {
         console.error("[v0] Failed to load data for matches:", err);
