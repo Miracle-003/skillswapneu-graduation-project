@@ -23,6 +23,18 @@ router.get("/:participantId", async (req, res) => {
       orderBy: { createdAt: "asc" },
     })
     
+    // Mark all messages from participant as read
+    await prisma.message.updateMany({
+      where: {
+        senderId: participantId,
+        receiverId: me,
+        read: false
+      },
+      data: {
+        read: true
+      }
+    })
+    
     // Enrich with sender names
     const enriched = await Promise.all(
       messages.map(async (msg) => {
@@ -92,8 +104,29 @@ router.post("/", async (req, res) => {
 // Mark message as read
 router.patch("/:id/read", async (req, res) => {
   try {
-    // Model has no 'read' field; acknowledge without DB mutation
-    res.status(204).send()
+    const { id } = req.params
+    const me = req.user.id
+    
+    // Verify the user is the receiver of the message
+    const message = await prisma.message.findUnique({
+      where: { id }
+    })
+    
+    if (!message) {
+      return res.status(404).json({ error: "Message not found" })
+    }
+    
+    if (message.receiverId !== me) {
+      return res.status(403).json({ error: "Forbidden: can only mark own messages as read" })
+    }
+    
+    // Update the message to mark it as read
+    const updated = await prisma.message.update({
+      where: { id },
+      data: { read: true }
+    })
+    
+    res.json(updated)
   } catch (error) {
     res.status(400).json({ error: error.message })
   }
@@ -155,13 +188,22 @@ router.get("/conversations", async (req, res) => {
           orderBy: { createdAt: "desc" }
         })
         
+        // Count unread messages from this participant
+        const unreadCount = await prisma.message.count({
+          where: {
+            senderId: participantId,
+            receiverId: me,
+            read: false
+          }
+        })
+        
         return {
           id: participantId,
           participant_id: participantId,
           participant_name: participant?.fullName || "Unknown User",
           last_message: lastMessage?.content || "No messages yet",
           last_message_time: lastMessage?.createdAt || conn.createdAt,
-          unread_count: 0 // TODO: implement unread count if needed
+          unread_count: unreadCount
         }
       })
     )
