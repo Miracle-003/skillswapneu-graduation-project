@@ -120,15 +120,20 @@ router.post("/", async (req, res) => {
     if (senderId && !isValidUUID(senderId)) {
       return res.status(400).json({ error: "Invalid senderId: must be a valid UUID" })
     }
-    if (receiverId && !isValidUUID(receiverId)) {
-      return res.status(400).json({ error: "Invalid receiverId: must be a valid UUID" })
-    }
     
     if (senderId && senderId !== me) {
       return res.status(403).json({ error: "Forbidden: senderId must match the authenticated user" })
     }
-    if (!receiverId) return res.status(400).json({ error: "receiverId is required" })
-    if (!content || typeof content !== "string") return res.status(400).json({ error: "content is required" })
+    
+    if (!receiverId) {
+      return res.status(400).json({ error: "receiverId is required" })
+    }
+    if (!isValidUUID(receiverId)) {
+      return res.status(400).json({ error: "Invalid receiverId: must be a valid UUID" })
+    }
+    if (!content || typeof content !== "string") {
+      return res.status(400).json({ error: "content is required" })
+    }
 
     const message = await prisma.message.create({
       data: { senderId: me, receiverId, content },
