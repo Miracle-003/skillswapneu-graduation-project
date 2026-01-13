@@ -1,6 +1,7 @@
 import express from "express"
 import { prisma } from "../lib/prisma.js"
 import { requireAuth } from "../middleware/requireAuth.js"
+import { validate as isValidUUID } from "uuid"
 
 const router = express.Router()
 
@@ -12,6 +13,14 @@ router.get("/:participantId", async (req, res) => {
   try {
     const { participantId } = req.params
     const me = req.user.id
+    
+    // Validate UUIDs
+    if (!isValidUUID(participantId)) {
+      return res.status(400).json({ error: "Invalid participantId: must be a valid UUID" })
+    }
+    if (!isValidUUID(me)) {
+      return res.status(400).json({ error: "Invalid user ID: must be a valid UUID" })
+    }
 
     const messages = await prisma.message.findMany({
       where: {
@@ -66,6 +75,18 @@ router.get("/:userId1/:userId2", async (req, res) => {
   try {
     const { userId1, userId2 } = req.params
     const me = req.user.id
+    
+    // Validate UUIDs
+    if (!isValidUUID(userId1)) {
+      return res.status(400).json({ error: "Invalid userId1: must be a valid UUID" })
+    }
+    if (!isValidUUID(userId2)) {
+      return res.status(400).json({ error: "Invalid userId2: must be a valid UUID" })
+    }
+    if (!isValidUUID(me)) {
+      return res.status(400).json({ error: "Invalid user ID: must be a valid UUID" })
+    }
+    
     if (me !== userId1 && me !== userId2) {
       return res.status(403).json({ error: "Forbidden: cannot read other users' conversations" })
     }
@@ -91,6 +112,18 @@ router.post("/", async (req, res) => {
   try {
     const me = req.user.id
     const { senderId, receiverId, content } = req.body || {}
+    
+    // Validate UUIDs
+    if (!isValidUUID(me)) {
+      return res.status(400).json({ error: "Invalid user ID: must be a valid UUID" })
+    }
+    if (senderId && !isValidUUID(senderId)) {
+      return res.status(400).json({ error: "Invalid senderId: must be a valid UUID" })
+    }
+    if (receiverId && !isValidUUID(receiverId)) {
+      return res.status(400).json({ error: "Invalid receiverId: must be a valid UUID" })
+    }
+    
     if (senderId && senderId !== me) {
       return res.status(403).json({ error: "Forbidden: senderId must match the authenticated user" })
     }
@@ -112,6 +145,14 @@ router.patch("/:id/read", async (req, res) => {
   try {
     const { id } = req.params
     const me = req.user.id
+    
+    // Validate UUIDs
+    if (!isValidUUID(id)) {
+      return res.status(400).json({ error: "Invalid message ID: must be a valid UUID" })
+    }
+    if (!isValidUUID(me)) {
+      return res.status(400).json({ error: "Invalid user ID: must be a valid UUID" })
+    }
     
     // Verify the user is the receiver of the message
     const message = await prisma.message.findUnique({
@@ -143,6 +184,15 @@ router.get("/recent/:userId", async (req, res) => {
   try {
     const { userId } = req.params
     const me = req.user.id
+    
+    // Validate UUIDs
+    if (!isValidUUID(userId)) {
+      return res.status(400).json({ error: "Invalid userId: must be a valid UUID" })
+    }
+    if (!isValidUUID(me)) {
+      return res.status(400).json({ error: "Invalid user ID: must be a valid UUID" })
+    }
+    
     if (userId !== me) {
       return res.status(403).json({ error: "Forbidden: cannot read another user's inbox" })
     }
@@ -162,6 +212,11 @@ router.get("/recent/:userId", async (req, res) => {
 router.get("/conversations", async (req, res) => {
   try {
     const me = req.user.id
+    
+    // Validate UUID
+    if (!isValidUUID(me)) {
+      return res.status(400).json({ error: "Invalid user ID: must be a valid UUID" })
+    }
     
     // Get all accepted connections
     const connections = await prisma.connection.findMany({
