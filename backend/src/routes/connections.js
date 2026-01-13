@@ -37,8 +37,27 @@ router.get("/user/:userId", async (req, res) => {
       OR: [{ userId1: me }, { userId2: me }],
       ...(status ? { status } : {}),
     }
-    const connections = await prisma.connection.findMany({ where, orderBy: { createdAt: "desc" } })
-    res.json({ connections })
+    const connections = await prisma.connection.findMany({ 
+      where, 
+      orderBy: { createdAt: "desc" },
+      include: {
+        user1: true,
+        user2: true
+      }
+    })
+    
+    // Transform to include the other user's profile
+    const enriched = connections.map((conn) => {
+      const otherUserId = conn.userId1 === me ? conn.userId2 : conn.userId1
+      const otherUser = conn.userId1 === me ? conn.user2 : conn.user1
+      return {
+        ...conn,
+        otherUserId,
+        otherUser
+      }
+    })
+    
+    res.json({ connections: enriched })
   } catch (error) {
     res.status(400).json({ error: error.message })
   }

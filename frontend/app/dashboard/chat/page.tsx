@@ -48,6 +48,7 @@ export default function ChatPage() {
   const [newMessage, setNewMessage] = useState("")
   const [currentUserId, setCurrentUserId] = useState<string>("")
   const [loading, setLoading] = useState(true)
+  const [mobileView, setMobileView] = useState<"chats" | "messages" | "discover">("chats")
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -389,9 +390,38 @@ export default function ChatPage() {
           <p className="text-muted-foreground">Chat with connections and discover new study partners</p>
         </div>
 
+        {/* Mobile view selector - shown only on small screens */}
+        <div className="lg:hidden flex gap-2 mb-4">
+          <Button
+            variant={mobileView === "chats" ? "default" : "outline"}
+            onClick={() => setMobileView("chats")}
+            className="flex-1"
+          >
+            <Users className="w-4 h-4 mr-2" />
+            Chats
+          </Button>
+          <Button
+            variant={mobileView === "messages" ? "default" : "outline"}
+            onClick={() => setMobileView("messages")}
+            className="flex-1"
+            disabled={!selectedConversation}
+          >
+            <Send className="w-4 h-4 mr-2" />
+            Messages
+          </Button>
+          <Button
+            variant={mobileView === "discover" ? "default" : "outline"}
+            onClick={() => setMobileView("discover")}
+            className="flex-1"
+          >
+            <Heart className="w-4 h-4 mr-2" />
+            Discover
+          </Button>
+        </div>
+
         <div className="grid lg:grid-cols-12 gap-6 h-[70vh] sm:h-[80vh] md:h-[700px]">
           {/* Left: Conversations List */}
-          <Card className="lg:col-span-3">
+          <Card className={`lg:col-span-3 ${mobileView !== "chats" ? "hidden lg:block" : ""}`}>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Users className="w-5 h-5" />
@@ -411,7 +441,11 @@ export default function ChatPage() {
                   conversations.map((conv) => (
                     <button
                       key={conv.id}
-                      onClick={() => setSelectedConversation(conv.id)}
+                      onClick={() => {
+                        setSelectedConversation(conv.id)
+                        // Switch to messages view on mobile when conversation is selected
+                        setMobileView("messages")
+                      }}
                       className={`w-full p-4 flex items-start gap-3 hover:bg-muted transition-colors border-b ${
                         selectedConversation === conv.id ? "bg-muted" : ""
                       }`}
@@ -424,9 +458,16 @@ export default function ChatPage() {
                       <div className="flex-1 text-left">
                         <div className="flex items-center justify-between mb-1">
                           <span className="font-semibold text-sm">{conv.participant_name}</span>
-                          <span className="text-xs text-muted-foreground">
-                            {formatDistanceToNow(new Date(conv.last_message_time), { addSuffix: true })}
-                          </span>
+                          <div className="flex items-center gap-2">
+                            {conv.unread_count > 0 && (
+                              <Badge variant="destructive" className="h-5 min-w-5 flex items-center justify-center rounded-full px-1.5">
+                                {conv.unread_count}
+                              </Badge>
+                            )}
+                            <span className="text-xs text-muted-foreground">
+                              {formatDistanceToNow(new Date(conv.last_message_time), { addSuffix: true })}
+                            </span>
+                          </div>
                         </div>
                         <p className="text-sm text-muted-foreground line-clamp-1">{conv.last_message}</p>
                       </div>
@@ -438,11 +479,19 @@ export default function ChatPage() {
           </Card>
 
           {/* Center: Messages Area */}
-          <Card className="lg:col-span-5 flex flex-col">
+          <Card className={`lg:col-span-5 flex flex-col ${mobileView !== "messages" ? "hidden lg:flex" : ""}`}>
             {selectedConversation ? (
               <>
                 <CardHeader className="border-b">
                   <CardTitle className="flex items-center gap-3">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="lg:hidden"
+                      onClick={() => setMobileView("chats")}
+                    >
+                      <ArrowLeft className="w-4 h-4" />
+                    </Button>
                     <Avatar>
                       <AvatarFallback className="bg-[#8B1538] text-white">
                         {getInitials(conversations.find((c) => c.id === selectedConversation)?.participant_name || "U")}
@@ -498,7 +547,7 @@ export default function ChatPage() {
           </Card>
 
           {/* Right: Potential Matches Discovery */}
-          <Card className="lg:col-span-4">
+          <Card className={`lg:col-span-4 ${mobileView !== "discover" ? "hidden lg:block" : ""}`}>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Heart className="w-5 h-5 text-[#8B1538]" />
