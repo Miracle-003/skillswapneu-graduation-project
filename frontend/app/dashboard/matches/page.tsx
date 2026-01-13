@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 import { authService, profileService, connectionService } from "@/lib/api/services";
 import { matchService } from "@/lib/api/services/match.service";
@@ -20,6 +21,7 @@ export default function MatchesPage() {
   const [completion, setCompletion] = useState(0);
   const [error, setError] = useState("");
   const [matches, setMatches] = useState<any[]>([]);
+  const [connections, setConnections] = useState<any[]>([]);
   const [userId, setUserId] = useState("");
   const [connectingWith, setConnectingWith] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState("");
@@ -121,6 +123,78 @@ export default function MatchesPage() {
               }
             ]);
           }
+        }
+        
+        // Fetch connections
+        console.log("[v0] Fetching connections for user:", currentUserId);
+        try {
+          const connectionsData = await connectionService.getUserConnections(currentUserId, "accepted");
+          console.log("[v0] Connections data:", connectionsData);
+          
+          if (connectionsData && connectionsData.connections && connectionsData.connections.length > 0) {
+            setConnections(connectionsData.connections);
+          } else {
+            // Use dummy data for presentation
+            console.log("[v0] No connections from API, using dummy data");
+            setConnections([
+              {
+                id: "00000000-0000-0000-0000-000000000031",
+                userId1: currentUserId,
+                userId2: "00000000-0000-0000-0000-000000000001",
+                status: "accepted",
+                createdAt: new Date(Date.now() - 86400000).toISOString(),
+                otherUserId: "00000000-0000-0000-0000-000000000001",
+                otherUser: {
+                  userId: "00000000-0000-0000-0000-000000000001",
+                  fullName: "Sarah Johnson",
+                  major: "Computer Science",
+                  year: "Senior",
+                  bio: "Passionate about machine learning and AI.",
+                  courses: ["CS 5004", "CS 5008", "CS 5200"],
+                  interests: ["Machine Learning", "AI", "Data Science"]
+                }
+              },
+              {
+                id: "00000000-0000-0000-0000-000000000032",
+                userId1: currentUserId,
+                userId2: "00000000-0000-0000-0000-000000000002",
+                status: "accepted",
+                createdAt: new Date(Date.now() - 172800000).toISOString(),
+                otherUserId: "00000000-0000-0000-0000-000000000002",
+                otherUser: {
+                  userId: "00000000-0000-0000-0000-000000000002",
+                  fullName: "Michael Chen",
+                  major: "Software Engineering",
+                  year: "Junior",
+                  bio: "Love coding and algorithms.",
+                  courses: ["CS 5002", "CS 5004", "CS 5010"],
+                  interests: ["Algorithms", "Web Development", "Mobile Apps"]
+                }
+              }
+            ]);
+          }
+        } catch (connErr: any) {
+          console.error("[v0] Failed to load connections:", connErr);
+          // Use dummy data on error
+          setConnections([
+            {
+              id: "00000000-0000-0000-0000-000000000031",
+              userId1: currentUserId,
+              userId2: "00000000-0000-0000-0000-000000000001",
+              status: "accepted",
+              createdAt: new Date(Date.now() - 86400000).toISOString(),
+              otherUserId: "00000000-0000-0000-0000-000000000001",
+              otherUser: {
+                userId: "00000000-0000-0000-0000-000000000001",
+                fullName: "Sarah Johnson",
+                major: "Computer Science",
+                year: "Senior",
+                bio: "Passionate about machine learning and AI.",
+                courses: ["CS 5004", "CS 5008", "CS 5200"],
+                interests: ["Machine Learning", "AI", "Data Science"]
+              }
+            }
+          ]);
         }
       } catch (err: any) {
         console.error("[v0] Failed to load data for matches:", err);
@@ -281,36 +355,49 @@ export default function MatchesPage() {
           </Alert>
         )}
 
-        {completion >= 100 && matches.length === 0 && (
-          <Card className="mt-8">
-            <CardContent className="pt-6">
-              <div className="flex flex-col items-center gap-4">
-                <Users className="w-12 h-12 text-primary" />
-                <div className="text-center">
-                  <p className="text-lg font-semibold mb-2">
-                    Looking for matches...
-                  </p>
-                  <p className="text-sm text-muted-foreground">
-                    No matches found yet. Check back soon!
-                  </p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        )}
+        {completion >= 100 && (
+          <Tabs defaultValue="suggestions" className="w-full">
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="suggestions" className="flex items-center gap-2">
+                <Heart className="w-4 h-4" />
+                Suggestions ({matches.length})
+              </TabsTrigger>
+              <TabsTrigger value="connected" className="flex items-center gap-2">
+                <Users className="w-4 h-4" />
+                Connected ({connections.length})
+              </TabsTrigger>
+            </TabsList>
 
-        {completion >= 100 && matches.length > 0 && (
-          <div className="space-y-4">
-            <Alert>
-              <AlertDescription className="flex items-center gap-2">
-                <Heart className="w-4 h-4 text-red-500" />
-                <span>
-                  Found {matches.length} potential study {matches.length === 1 ? 'partner' : 'partners'}!
-                </span>
-              </AlertDescription>
-            </Alert>
+            {/* Suggestions Tab */}
+            <TabsContent value="suggestions" className="space-y-4 mt-6">
+              {matches.length === 0 ? (
+                <Card>
+                  <CardContent className="pt-6">
+                    <div className="flex flex-col items-center gap-4">
+                      <Users className="w-12 h-12 text-primary" />
+                      <div className="text-center">
+                        <p className="text-lg font-semibold mb-2">
+                          Looking for matches...
+                        </p>
+                        <p className="text-sm text-muted-foreground">
+                          No matches found yet. Check back soon!
+                        </p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ) : (
+                <>
+                  <Alert>
+                    <AlertDescription className="flex items-center gap-2">
+                      <Heart className="w-4 h-4 text-red-500" />
+                      <span>
+                        Found {matches.length} potential study {matches.length === 1 ? 'partner' : 'partners'}!
+                      </span>
+                    </AlertDescription>
+                  </Alert>
 
-            <div className="grid gap-4 md:grid-cols-2">
+                  <div className="grid gap-4 md:grid-cols-2">
               {matches.map((match: any) => {
                 const matchedUserId = match.userId1 === userId ? match.userId2 : match.userId1;
                 return (
@@ -384,7 +471,110 @@ export default function MatchesPage() {
                 );
               })}
             </div>
-          </div>
+                </>
+              )}
+            </TabsContent>
+
+            {/* Connected Tab */}
+            <TabsContent value="connected" className="space-y-4 mt-6">
+              {connections.length === 0 ? (
+                <Card>
+                  <CardContent className="pt-6">
+                    <div className="flex flex-col items-center gap-4">
+                      <Users className="w-12 h-12 text-primary" />
+                      <div className="text-center">
+                        <p className="text-lg font-semibold mb-2">
+                          No connections yet
+                        </p>
+                        <p className="text-sm text-muted-foreground">
+                          Connect with matches to start building your study network!
+                        </p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ) : (
+                <>
+                  <Alert>
+                    <AlertDescription className="flex items-center gap-2">
+                      <Users className="w-4 h-4 text-green-600" />
+                      <span>
+                        You have {connections.length} active {connections.length === 1 ? 'connection' : 'connections'}!
+                      </span>
+                    </AlertDescription>
+                  </Alert>
+
+                  <div className="grid gap-4 md:grid-cols-2">
+                    {connections.map((connection: any) => {
+                      const connectedUser = connection.otherUser;
+                      const connectedUserId = connection.otherUserId;
+                      
+                      return (
+                        <Card key={connection.id} className="hover:shadow-lg transition-shadow">
+                          <CardHeader>
+                            <CardTitle className="flex items-center justify-between">
+                              <span>{connectedUser?.fullName || 'Unknown User'}</span>
+                              <Badge variant="secondary" className="bg-green-100 text-green-800">
+                                Connected
+                              </Badge>
+                            </CardTitle>
+                            <CardDescription>
+                              {connectedUser?.major || 'Major not specified'} • Year {connectedUser?.year || 'N/A'}
+                            </CardDescription>
+                          </CardHeader>
+                          <CardContent className="space-y-4">
+                            {connectedUser?.bio && (
+                              <p className="text-sm text-muted-foreground line-clamp-2">
+                                {connectedUser.bio}
+                              </p>
+                            )}
+                            
+                            {connectedUser?.courses && connectedUser.courses.length > 0 && (
+                              <div>
+                                <p className="text-sm font-semibold mb-2">Courses:</p>
+                                <div className="flex flex-wrap gap-2">
+                                  {connectedUser.courses.slice(0, 3).map((course: string, idx: number) => (
+                                    <Badge key={idx} variant="outline">{course}</Badge>
+                                  ))}
+                                  {connectedUser.courses.length > 3 && (
+                                    <Badge variant="outline">+{connectedUser.courses.length - 3} more</Badge>
+                                  )}
+                                </div>
+                              </div>
+                            )}
+
+                            {connectedUser?.interests && connectedUser.interests.length > 0 && (
+                              <div>
+                                <p className="text-sm font-semibold mb-2">Interests:</p>
+                                <div className="flex flex-wrap gap-2">
+                                  {connectedUser.interests.slice(0, 3).map((interest: string, idx: number) => (
+                                    <Badge key={idx} variant="secondary">{interest}</Badge>
+                                  ))}
+                                  {connectedUser.interests.length > 3 && (
+                                    <Badge variant="secondary">+{connectedUser.interests.length - 3} more</Badge>
+                                  )}
+                                </div>
+                              </div>
+                            )}
+
+                            <div className="flex gap-2 pt-4">
+                              <Button 
+                                className="flex-1 bg-[#8B1538] hover:bg-[#A91D3A]"
+                                onClick={() => handleMessage(connectedUserId)}
+                              >
+                                <MessageCircle className="w-4 h-4 mr-2" />
+                                Message
+                              </Button>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      );
+                    })}
+                  </div>
+                </>
+              )}
+            </TabsContent>
+          </Tabs>
         )}
       </div>
     </div>
